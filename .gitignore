@@ -1,0 +1,121 @@
+# Ignore Visual Studio temporary files, build results, and
+# user-generated files
+# 
+## Ignore Visual Studio temporary files, build results, and
+## user-generated files
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User-specific files (Mono auto generated)
+mono_crash.*
+
+# Mono auto generated files
+mono_crash.*
+
+# OS-specific generated files #
+##############################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.tiff
+*.tif
+*.bmp
+*.svg
+
+# Lock files
+*.lock
+*.log
+*.pid
+*.seed
+*.tgz
+*.lock
+*.log
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+
+# Visual Studio 2019 files
+.vs/
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Ww][Ii][Nn]/
+[Ll]inux/
+[Mm]ac/
+[Bb]uild/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio 2019 directories
+.vs/
+.vscode/
+
+# Windows image file caches
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows shortcuts
+*.lnk
+
+# Node modules
+node_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Ignore .NET-specific files
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.ide.vc.db
+*.ide.vc.db-wal
+*.ide.vc.db-shm
+
+# Ignore .NET Core files
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.ide.vc.db
+*.ide.vc.db-wal
+*.ide.vc.db-shm
+
+# Ignore .NET Standard files
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.ide.vc.db
+*.ide.vc.db-wal
+*.ide.vc.db-shm
