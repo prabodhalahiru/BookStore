@@ -19,7 +19,7 @@ namespace BookStoreMainSup.Areas.Identity.Pages.Account
         [BindProperty]
         public InputModel Input { get; set; }
 
-        public string ReturnUrl { get; set; } = "/";
+        public string ReturnUrl { get; set; }
 
         public class InputModel
         {
@@ -28,9 +28,15 @@ namespace BookStoreMainSup.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
-        public void OnGet(string returnUrl = null)
+        public IActionResult OnGet(string returnUrl = null)
         {
-            ReturnUrl = returnUrl ?? "/";
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToPage("/Landing/Index");
+            }
+
+            ReturnUrl = returnUrl;
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
