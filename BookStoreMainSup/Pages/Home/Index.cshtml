@@ -1,0 +1,13 @@
+@page
+@model BookStoreMainSup.Pages.Home.IndexModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="jumbotron">
+    <h1>Welcome to BookStoreMainSup</h1>
+    <p class="lead">Your one-stop shop for all your book needs.</p>
+    <p>
+        <a class="btn btn-primary btn-lg" href="@Url.Page("/Account/Login", new { area = "Identity" })" role="button">Get Started</a>
+    </p>
+</div>

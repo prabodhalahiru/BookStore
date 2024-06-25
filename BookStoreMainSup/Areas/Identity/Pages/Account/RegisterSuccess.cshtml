@@ -1,0 +1,20 @@
+@page
+@model RegisterSuccessModel
+@{
+    ViewData["Title"] = "Registration Successful";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>You have successfully registered.</p>
+<p>You will be redirected to the login page shortly, or you can click the button below to go to the login page now.</p>
+
+<a asp-page="./Login" class="btn btn-primary">Go to Login</a>
+
+@section Scripts {
+    <script type="text/javascript">
+        setTimeout(function() {
+            window.location.href = '@Url.Page("./Login")';
+        }, 5000); // Redirect after 5 seconds
+    </script>
+}

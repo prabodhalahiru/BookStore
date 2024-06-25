@@ -1,3 +1,154 @@
+@*@using Microsoft.AspNetCore.Hosting
+    @using Microsoft.AspNetCore.Mvc.ViewEngines
+    @using Microsoft.AspNetCore.Mvc.Routing
+    @inject IWebHostEnvironment Environment
+    @inject ICompositeViewEngine Engine
+    @inject IUrlHelperFactory UrlHelperFactory
+
+    @{
+        var urlHelper = UrlHelperFactory.GetUrlHelper(ViewContext);
+        var currentPath = ViewContext.HttpContext.Request.Path;
+        var isLoginPage = currentPath.Equals(urlHelper.Action("Login", "Account", new { area = "Identity" }));
+        var isRegisterPage = currentPath.Equals(urlHelper.Action("Register", "Account", new { area = "Identity" }));
+    }
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>@ViewData["Title"] - BookStoreMainSup</title>
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="~/css/site.css" />
+    </head>
+    <body>
+        <header>
+            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+                <div class="container">
+                    <a class="navbar-brand" href="/">BookStoreMainSup</a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
+                        <ul class="navbar-nav flex-grow-1">
+                            @if (User.Identity.IsAuthenticated && !isLoginPage && !isRegisterPage)
+                            {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index">Hello @User.Identity.Name!</a>
+                            </li>
+                            <li class="nav-item">
+                                <form id="logoutForm" asp-area="Identity" asp-page="/Account/Logout" method="post" class="form-inline">
+                                    <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+                                </form>
+                            </li>
+                            }
+                            else
+                            {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        <div class="container">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="border-top footer text-muted">
+            <div class="container">
+                &copy; 2023 - BookStoreMainSup - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            </div>
+        </footer>
+
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        @RenderSection("Scripts", required: false)
+    </body>
+    </html>*@
+
+@*@using Microsoft.AspNetCore.Hosting
+    @using Microsoft.AspNetCore.Mvc.ViewEngines
+    @inject IWebHostEnvironment Environment
+    @inject ICompositeViewEngine Engine
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>@ViewData["Title"] - BookStoreMainSup</title>
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+        <link rel="stylesheet" href="~/css/site.css" />
+    </head>
+    <body>
+        @{
+            var currentPath = Context.Request.Path;
+            bool isLoginPage = currentPath.StartsWithSegments("/Identity/Account/Login");
+            bool isRegisterPage = currentPath.StartsWithSegments("/Identity/Account/Register");
+        }
+        <header>
+            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+                <div class="container">
+                    <a class="navbar-brand" href="/Home">BookStoreMainSup</a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
+                        <ul class="navbar-nav flex-grow-1">
+                            @if (!isLoginPage && !isRegisterPage)
+                            {
+                            @if (User.Identity.IsAuthenticated)
+                                {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index">Hello @User.Identity.Name!</a>
+                            </li>
+                            <li class="nav-item">
+                                <form id="logoutForm" asp-area="Identity" asp-page="/Account/Logout" method="post" class="form-inline">
+                                    <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
+                                </form>
+                            </li>
+                                }
+                                else
+                                {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
+                            </li>
+                                }
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        <div class="container">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="border-top footer text-muted">
+            <div class="container">
+                &copy; 2023 - BookStoreMainSup - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+            </div>
+        </footer>
+
+        <script src="~/lib/jquery/dist/jquery.min.js"></script>
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="~/js/site.js" asp-append-version="true"></script>
+        @RenderSection("Scripts", required: false)
+    </body>
+    </html>*@
 @using Microsoft.AspNetCore.Hosting
 @using Microsoft.AspNetCore.Mvc.ViewEngines
 @inject IWebHostEnvironment Environment
@@ -12,17 +163,24 @@
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
+    @{
+        var currentPath = Context.Request.Path;
+        bool isLoginPage = currentPath.StartsWithSegments("/Identity/Account/Login");
+        bool isRegisterPage = currentPath.StartsWithSegments("/Identity/Account/Register");
+    }
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container">
-                <a class="navbar-brand" href="/">BookStoreMainSup</a>
+                <a class="navbar-brand" href="/Home">BookStoreMainSup</a>
                 <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex flex-sm-row-reverse">
                     <ul class="navbar-nav flex-grow-1">
-                        @if (User.Identity.IsAuthenticated)
-                {
+                        @if (!isLoginPage && !isRegisterPage)
+                        {
+                            if (User.Identity.IsAuthenticated)
+                            {
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Manage/Index">Hello @User.Identity.Name!</a>
                         </li>
@@ -31,16 +189,17 @@
                                 <button type="submit" class="nav-link btn btn-link text-dark">Logout</button>
                             </form>
                         </li>
-                }
-                else
-                {
+                            }
+                            else
+                            {
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Login">Login</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="Identity" asp-page="/Account/Register">Register</a>
                         </li>
-                }
+                            }
+                        }
                     </ul>
                 </div>
             </div>
@@ -64,4 +223,3 @@
     @RenderSection("Scripts", required: false)
 </body>
 </html>
-

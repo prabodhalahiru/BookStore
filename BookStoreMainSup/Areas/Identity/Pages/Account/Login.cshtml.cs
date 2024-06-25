@@ -19,7 +19,7 @@ namespace BookStoreMainSup.Areas.Identity.Pages.Account
         [BindProperty]
         public InputModel Input { get; set; }
 
-        public string ReturnUrl { get; set; }
+        public string ReturnUrl { get; set; } = "/";
 
         public class InputModel
         {
@@ -30,7 +30,7 @@ namespace BookStoreMainSup.Areas.Identity.Pages.Account
 
         public void OnGet(string returnUrl = null)
         {
-            ReturnUrl = returnUrl;
+            ReturnUrl = returnUrl ?? "/";
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
