@@ -9,18 +9,18 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly ApplicationDbContext _db;
 
-        public BooksController(ApplicationDbContext context)
+        public BooksController(ApplicationDbContext db)
         {
-            _context = context;
+            _db = db;
         }
 
         //Get: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
         {
-            return await _context.Books.ToListAsync();
+            return await _db.Books.ToListAsync();
         }
     }
 }

@@ -10,7 +10,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
     builder.Configuration.GetConnectionString("DefaultConnection")
     )); 
 builder.Services.AddSwaggerGen();
-
+//Register controllers
+builder.Services.AddControllers();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -41,6 +42,7 @@ app.MapGet("/weatherforecast", () =>
 })
 .WithName("GetWeatherForecast");
 
+app.MapControllers();
 app.Run();
 
 internal record WeatherForecast(DateTime Date, int TemperatureC, string? Summary)
