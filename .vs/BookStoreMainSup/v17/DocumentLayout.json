@@ -1,0 +1,113 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|c:\\users\\raveendran.pirarthan\\documents\\github\\bookstore\\bookstoremainsup\\controllers\\bookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|solutionrelative:bookstoremainsup\\controllers\\bookscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|c:\\users\\raveendran.pirarthan\\documents\\github\\bookstore\\bookstoremainsup\\migrations\\20240627132539_addpurchasedcount.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|solutionrelative:bookstoremainsup\\migrations\\20240627132539_addpurchasedcount.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|c:\\users\\raveendran.pirarthan\\documents\\github\\bookstore\\bookstoremainsup\\models\\book.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|solutionrelative:bookstoremainsup\\models\\book.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|c:\\users\\raveendran.pirarthan\\documents\\github\\bookstore\\bookstoremainsup\\models\\bookdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|solutionrelative:bookstoremainsup\\models\\bookdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|c:\\users\\raveendran.pirarthan\\documents\\github\\bookstore\\bookstoremainsup\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{412A554C-4E34-461B-83E1-CE3256534899}|BookStoreMainSup\\BookStoreMainSup.csproj|solutionrelative:bookstoremainsup\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 5,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{0ad07096-bba9-4900-a651-0598d26f6d24}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "BookDto.cs",
+              "DocumentMoniker": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Models\\BookDto.cs",
+              "RelativeDocumentMoniker": "BookStoreMainSup\\Models\\BookDto.cs",
+              "ToolTip": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Models\\BookDto.cs",
+              "RelativeToolTip": "BookStoreMainSup\\Models\\BookDto.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-28T00:49:11.323Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "20240627132539_AddPurchasedCount.cs",
+              "DocumentMoniker": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Migrations\\20240627132539_AddPurchasedCount.cs",
+              "RelativeDocumentMoniker": "BookStoreMainSup\\Migrations\\20240627132539_AddPurchasedCount.cs",
+              "ToolTip": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Migrations\\20240627132539_AddPurchasedCount.cs",
+              "RelativeToolTip": "BookStoreMainSup\\Migrations\\20240627132539_AddPurchasedCount.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-27T13:25:39.993Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Book.cs",
+              "DocumentMoniker": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Models\\Book.cs",
+              "RelativeDocumentMoniker": "BookStoreMainSup\\Models\\Book.cs",
+              "ToolTip": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Models\\Book.cs",
+              "RelativeToolTip": "BookStoreMainSup\\Models\\Book.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAkAAAAoAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-27T11:05:40.927Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "BooksController.cs",
+              "DocumentMoniker": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Controllers\\BooksController.cs",
+              "RelativeDocumentMoniker": "BookStoreMainSup\\Controllers\\BooksController.cs",
+              "ToolTip": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Controllers\\BooksController.cs",
+              "RelativeToolTip": "BookStoreMainSup\\Controllers\\BooksController.cs",
+              "ViewState": "AQIAABEAAAAAAAAAAAAgwCQAAAAnAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-27T08:21:15.417Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Program.cs",
+              "RelativeDocumentMoniker": "BookStoreMainSup\\Program.cs",
+              "ToolTip": "C:\\Users\\Raveendran.Pirarthan\\Documents\\GitHub\\BookStore\\BookStoreMainSup\\Program.cs",
+              "RelativeToolTip": "BookStoreMainSup\\Program.cs",
+              "ViewState": "AQIAAA8AAAAAAAAAAAAAABoAAAARAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2024-06-26T12:21:28.303Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

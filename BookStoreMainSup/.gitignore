@@ -10,6 +10,9 @@
 *.userosscache
 *.sln.docstates
 
+# Ignore Visual Studio index files
+*.vsidx
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
