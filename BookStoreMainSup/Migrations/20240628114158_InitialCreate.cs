@@ -4,7 +4,7 @@
 
 namespace BookStoreMainSup.Migrations
 {
-    public partial class AddBooksToDb : Migration
+    public partial class InitialCreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -16,7 +16,10 @@ namespace BookStoreMainSup.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Author = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Price = table.Column<double>(type: "float", nullable: false)
+                    Price = table.Column<double>(type: "float", nullable: false),
+                    ISBN = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Discount = table.Column<double>(type: "float", nullable: false),
+                    SellCount = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {

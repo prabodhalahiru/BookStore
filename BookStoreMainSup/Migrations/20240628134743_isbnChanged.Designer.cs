@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BookStoreMainSup.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240625131547_newDB")]
-    partial class newDB
+    [Migration("20240628134743_isbnChanged")]
+    partial class isbnChanged
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -35,10 +35,20 @@ namespace BookStoreMainSup.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<double>("Discount")
+                        .HasColumnType("float");
+
                     b.Property<double>("Price")
                         .HasColumnType("float");
 
+                    b.Property<int>("SellCount")
+                        .HasColumnType("int");
+
                     b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("isbn")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
