@@ -38,16 +38,7 @@ namespace BookStoreMainSup.Controllers
             await _db.SaveChangesAsync();
 
             double newPercentage = CalculateDiscount(book);
-            var part = book.Author.Split(" ");
-
-            var booksDto = new BooksDto();
-            booksDto.Title = book.Title;
-            booksDto.Fname = part[0];
-            booksDto.Lname = part[1];
-            booksDto.Price = book.Price;
-            booksDto.DiscountPrice = book.Price - (book.Price * newPercentage / 100);
-            booksDto.discount = newPercentage;
-            booksDto.SellCount = book.SellCount;
+            var booksDto = MapBooksdto(book, newPercentage);
 
             return booksDto;
         }
@@ -103,6 +94,25 @@ namespace BookStoreMainSup.Controllers
             }
 
             return newPercentage;
+        }
+
+        private BooksDto MapBooksdto(Books book, double newPercentage)
+        {
+            var part = book.Author.Split(" ");
+
+            var booksDto = new BooksDto();
+            booksDto.Title = book.Title;
+            booksDto.Fname = part[0];
+            booksDto.Lname = part[1];
+            booksDto.Price = book.Price;
+            booksDto.DiscountPrice = book.Price - (book.Price * newPercentage / 100);
+            booksDto.discount = newPercentage;
+            booksDto.SellCount = book.SellCount;
+
+
+            return booksDto;
+            
+
         }
 
     }
