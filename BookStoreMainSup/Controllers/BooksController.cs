@@ -33,8 +33,8 @@ namespace BookStoreMainSup.Controllers
                 return NotFound();
             }
             book.PurchasedCount = book.PurchasedCount + 1;
-            _context.Entry(book).State = EntityState.Modified;
-            //_context.Books.Add(book);
+            //_context.Entry(book).State = EntityState.Modified;
+            _context.Books.Update(book);
             await _context.SaveChangesAsync();
 
             var bookDto = ViewBook(book);
@@ -43,36 +43,52 @@ namespace BookStoreMainSup.Controllers
         }
 
         private BookDto ViewBook(Book book)
+        {                      
+            var(discountPercent, discountedPrice) = GetDiscounts(book);
+
+            var bookDto = GetBookDto(book, discountPercent, discountedPrice);
+
+            return bookDto;
+
+        }
+
+        private (double discountPercent, double discountedPrice) GetDiscounts(Book book)
         {
-            var authorName = book.Author.Split(' ');
-                        
-            double discountPercent = book.Discount + (book.PurchasedCount - 3);
+            double discountPercent = book.Discount + (5 * (book.PurchasedCount - 3));
             if (discountPercent < book.Discount)
             {
                 discountPercent = book.Discount;
-            } else if (discountPercent > 50)
+            }
+            else if (discountPercent > 50)
             {
                 discountPercent = 50;
             }
 
             double discountedPrice = book.Price - (book.Price * (discountPercent / 100));
 
-            var bookDto = new BookDto()
-             {
-                 Id = book.Id,
-                 Name = book.Name,
-                 IsbnNumber = book.IsbnNumber,
-                 Discount = discountPercent,
-                 Price = book.Price,
-                
-                 DiscountedPrice = discountedPrice,
-                 FirstName = authorName[0],
-                 LastName = authorName[1]
+            return (discountPercent, discountedPrice);
+        }
 
-             };
+        private BookDto GetBookDto(Book book, double discountPercent, double discountedPrice)
+        {
+            var authorName = book.Author.Split(' ');
+
+            var bookDto = new BookDto()
+            {
+                Id = book.Id,
+                Name = book.Name,
+                IsbnNumber = book.IsbnNumber,
+                Discount = discountPercent,
+                Price = book.Price,
+                PurchasedCount = book.PurchasedCount,
+
+                DiscountedPrice = discountedPrice,
+                FirstName = authorName[0],
+                LastName = authorName[1]
+
+            };
 
             return bookDto;
-
         }
 
         [HttpPost]

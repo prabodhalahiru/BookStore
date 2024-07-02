@@ -16,5 +16,6 @@ namespace BookStoreMainSup.Models
         public double Discount { get; set; }
 
         public double DiscountedPrice { get; set; }
+        public int PurchasedCount { get; set; }
     }
 }
