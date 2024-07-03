@@ -3,3 +3,5 @@
 /BookStoreMainSup/Data/
 /BookStoreMainSup/obj/
 /appsettings.json
+BookStoreMainSup/appsettings.Development.json
+BookStoreMainSup/appsettings.json
