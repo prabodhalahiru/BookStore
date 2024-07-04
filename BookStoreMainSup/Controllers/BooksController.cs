@@ -44,15 +44,13 @@ namespace BookStoreMainSup.Controllers
 
         private BookDto ViewBook(Book book)
         {                      
-            var(discountPercent, discountedPrice) = GetDiscounts(book);
-
-            var bookDto = GetBookDto(book, discountPercent, discountedPrice);
+            var bookDto = GetDiscounts(book);
 
             return bookDto;
 
         }
 
-        private (double discountPercent, double discountedPrice) GetDiscounts(Book book)
+        private BookDto GetDiscounts(Book book)
         {
             double discountPercent = book.Discount + (5 * (book.PurchasedCount - 3));
             if (discountPercent < book.Discount)
@@ -66,7 +64,9 @@ namespace BookStoreMainSup.Controllers
 
             double discountedPrice = book.Price - (book.Price * (discountPercent / 100));
 
-            return (discountPercent, discountedPrice);
+            var bookDto = GetBookDto(book, discountPercent, discountedPrice);
+
+            return bookDto;
         }
 
         private BookDto GetBookDto(Book book, double discountPercent, double discountedPrice)
