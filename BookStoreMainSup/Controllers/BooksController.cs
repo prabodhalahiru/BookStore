@@ -70,6 +70,16 @@ namespace BookStoreMainSup.Controllers
             return Ok(book);
         }
 
+        // POST: api/Books
+        [HttpPost]
+        public async Task<ActionResult<Books>> PostBook(Books book)
+        {
+            _db.Books.Add(book);
+            await _db.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
+        }
+
         private void UpdateBookSellCount(Books book)
         {
             book.SellCount = book.SellCount + 1;

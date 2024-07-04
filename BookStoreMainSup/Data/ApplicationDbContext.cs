@@ -12,6 +12,7 @@ namespace BookStoreMainSup.Data
         }
 
         public DbSet<Books> Books { get; set; }
+        public DbSet<User> Users { get; set; }
 
     }
 }
