@@ -56,9 +56,9 @@ namespace BookStoreMainSup.Controllers
                 await _db.SaveChangesAsync();
             }
 
-            catch(DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException)
             {
-                if(!BookExists(id))
+                if (!BookExists(id))
                 {
                     return NotFound();
                 }
