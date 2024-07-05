@@ -77,35 +77,6 @@ namespace BookStoreMainSup.Controllers
             return Ok(book);
         }
 
-        //// GET: api/Books/search?query=keyword
-        //[HttpGet("search")]
-        //public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
-        //{
-        //    if (string.IsNullOrEmpty(query))
-        //    {
-        //        return BadRequest("Query parameter is required.");
-        //    }
-
-        //    // Split the query into individual words
-        //    var words = query.Split(' ');
-
-        //    // Build the query to search for each word in the title or author or else isbn
-        //    var booksQuery = _db.Books.AsQueryable();
-
-        //    var predicate = PredicateBuilder.False<Books>();
-        //    foreach (var word in words)
-        //    {
-        //        var temp = word;
-        //        predicate = predicate.Or(b => b.Title.Contains(temp) || b.Author.Contains(temp) || b.isbn.Contains(temp));
-        //    }
-
-        //    booksQuery = booksQuery.Where(predicate);
-
-        //    var books = await booksQuery.ToListAsync();
-
-        //    return Ok(books);
-        //}
-
         // GET: api/Books/search?query=keyword
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
@@ -118,12 +89,12 @@ namespace BookStoreMainSup.Controllers
             // Fetch all books from the database
             var allBooks = await _db.Books.ToListAsync();
 
-            // Split the query into individual words
-            var words = query.Split(' ');
+            // Split the query into individual words and convert to lowercase
+            var words = query.Split(' ').Select(word => word.ToLower());
 
-            // Filter the books in memory
+            // Filter the books in memory, ignoring case sensitivity
             var filteredBooks = allBooks
-                .Where(b => words.Any(word => b.Title.Contains(word) || b.Author.Contains(word)))
+                .Where(b => words.Any(word => b.Title.ToLower().Contains(word) || b.Author.ToLower().Contains(word) || b.isbn.ToLower().Contains(word)))
                 .ToList();
 
             return Ok(filteredBooks);
