@@ -133,5 +133,22 @@ namespace BookStoreMainSup.Controllers
 
             return booksDto;
         }
+        //Delete Function
+        [HttpDelete("{isbn}")]
+        public async Task<IActionResult> DeleteBook(string isbn)
+        {
+            var book = await _db.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
+
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            _db.Books.Remove(book);
+            await _db.SaveChangesAsync();
+
+            return Ok(book);
+        }
+
     }
 }
