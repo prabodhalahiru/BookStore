@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using BookStoreMainSup.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -45,6 +46,7 @@ namespace BookStoreMainSup.Controllers
 
         //PUT: API/Books/{id}
         [HttpPut("{id}")]
+        [Authorize]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
 
