@@ -50,7 +50,6 @@ namespace BookStoreMainSup.Controllers
         //PUT: API/Books/{id}
         [Authorize]
         [HttpPut("{id}")]
-        [Authorize]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
             if (id != book.Id)
