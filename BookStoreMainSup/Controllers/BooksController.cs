@@ -134,6 +134,7 @@ namespace BookStoreMainSup.Controllers
             return booksDto;
         }
         //Delete Function
+        [Authorize]
         [HttpDelete("{isbn}")]
         public async Task<IActionResult> DeleteBook(string isbn)
         {
