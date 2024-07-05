@@ -77,7 +77,8 @@ namespace BookStoreMainSup.Controllers
             _db.Books.Add(book);
             await _db.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
+            // Return 201 Created with the book object
+            return StatusCode(201, book);
         }
 
         private void UpdateBookSellCount(Books book)
