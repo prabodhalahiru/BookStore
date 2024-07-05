@@ -77,6 +77,35 @@ namespace BookStoreMainSup.Controllers
             return Ok(book);
         }
 
+        // GET: api/Books/search?query=keyword
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return BadRequest("Query parameter is required.");
+            }
+
+            // Split the query into individual words
+            var words = query.Split(' ');
+
+            // Build the query to search for each word in the title or author
+            var booksQuery = _db.Books.AsQueryable();
+
+            var predicate = PredicateBuilder.False<Books>();
+            foreach (var word in words)
+            {
+                var temp = word;
+                predicate = predicate.Or(b => b.Title.Contains(temp) || b.Author.Contains(temp) || b.isbn.Contains(temp));
+            }
+
+            booksQuery = booksQuery.Where(predicate);
+
+            var books = await booksQuery.ToListAsync();
+
+            return Ok(books);
+        }
+
         // POST: api/Books
         [Authorize]
         [HttpPost]
