@@ -9,7 +9,7 @@ using System.Text;
 
 namespace BookStoreMainSup.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
