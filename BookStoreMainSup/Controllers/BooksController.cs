@@ -1,8 +1,11 @@
-﻿using BookStoreMainSup.Data;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
-using Microsoft.AspNetCore.Authorization;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -24,7 +27,7 @@ namespace BookStoreMainSup.Controllers
             return await _db.Books.ToListAsync();
         }
 
-        
+        //Get: api/Books/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<BooksDto>> GetBook(int id)
         {
@@ -45,19 +48,21 @@ namespace BookStoreMainSup.Controllers
         }
 
         //PUT: API/Books/{id}
-        [HttpPut("{id}")]
         [Authorize]
+        [HttpPut("{id}")]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
+            if (id != book.Id)
+            {
+                return BadRequest();
+            }
 
-            book.Id = id;
             _db.Entry(book).State = EntityState.Modified;
 
             try
             {
                 await _db.SaveChangesAsync();
             }
-
             catch (DbUpdateConcurrencyException)
             {
                 if (!BookExists(id))
@@ -72,14 +77,39 @@ namespace BookStoreMainSup.Controllers
             return Ok(book);
         }
 
+        // GET: api/Books/search?query=keyword
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
+        {
+            if (string.IsNullOrEmpty(query))
+            {
+                return BadRequest("Query parameter is required.");
+            }
+
+            // Fetch all books from the database
+            var allBooks = await _db.Books.ToListAsync();
+
+            // Split the query into individual words and convert to lowercase
+            var words = query.Split(' ').Select(word => word.ToLower());
+
+            // Filter the books in memory, ignoring case sensitivity
+            var filteredBooks = allBooks
+                .Where(b => words.Any(word => b.Title.ToLower().Contains(word) || b.Author.ToLower().Contains(word) || b.isbn.ToLower().Contains(word)))
+                .ToList();
+
+            return Ok(filteredBooks);
+        }
+
         // POST: api/Books
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
             _db.Books.Add(book);
             await _db.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetBook), new { id = book.Id }, book);
+            // Return 201 Created with the book object
+            return StatusCode(201, book);
         }
 
         private void UpdateBookSellCount(Books book)
@@ -87,6 +117,7 @@ namespace BookStoreMainSup.Controllers
             book.SellCount = book.SellCount + 1;
             _db.Entry(book).State = EntityState.Modified;
         }
+
         private bool BookExists(int id)
         {
             return _db.Books.Any(e => e.Id == id);
@@ -112,21 +143,21 @@ namespace BookStoreMainSup.Controllers
         {
             var part = book.Author.Split(" ");
 
-            var booksDto = new BooksDto();
-            booksDto.Title = book.Title;
-            booksDto.Fname = part[0];
-            booksDto.Lname = part[1];
-            booksDto.Price = book.Price;
-            booksDto.DiscountPrice = book.Price - (book.Price * newPercentage / 100);
-            booksDto.discount = newPercentage;
-            booksDto.SellCount = book.SellCount;
-
+            var booksDto = new BooksDto
+            {
+                Title = book.Title,
+                Fname = part.Length > 0 ? part[0] : "",
+                Lname = part.Length > 1 ? part[1] : "",
+                Price = book.Price,
+                DiscountPrice = book.Price - (book.Price * newPercentage / 100),
+                discount = newPercentage,
+                SellCount = book.SellCount
+            };
 
             return booksDto;
-            
-
         }
         //Delete Function
+        [Authorize]
         [HttpDelete("{isbn}")]
         public async Task<IActionResult> DeleteBook(string isbn)
         {
@@ -140,7 +171,7 @@ namespace BookStoreMainSup.Controllers
             _db.Books.Remove(book);
             await _db.SaveChangesAsync();
 
-            return Ok(book+"Deleted successfully");
+            return Ok(book);
         }
 
     }
