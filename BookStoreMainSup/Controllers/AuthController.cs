@@ -11,6 +11,7 @@ using BookStoreMainSup.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.RegularExpressions;
+using BookStoreMainSup.Resources;
 
 
 namespace BookStoreMainSup.Controllers
@@ -33,48 +34,27 @@ namespace BookStoreMainSup.Controllers
         private readonly ITokenRevocationService _tokenRevocationService;
 
         ///Register a new user
-        //[HttpPost("register")]
-        //public async Task<IActionResult> Register(UserDto request)
-        //{
-        //    if (await _db.Users.AnyAsync(u => u.Email == request.Email || u.Username == request.Username))
-        //    {
-        //        return BadRequest("User already exists.");
-        //    }
-
-        //    var user = new User
-        //    {
-        //        Username = request.Username,
-        //        Email = request.Email,
-        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
-        //    };
-
-        //    _db.Users.Add(user);
-        //    await _db.SaveChangesAsync();
-
-        //    return Ok(new { message = "User registered successfully" });
-        //}
-
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserDto request)
         {
             if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest("All fields are required.");
+                return BadRequest(ErrorMessages.RequiredFields);
             }
 
             if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                return BadRequest("Invalid email format.");
+                return BadRequest(ErrorMessages.InvalidEmailFormat);
             }
 
             if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
             {
-                return BadRequest("Username must be between 3 and 20 characters and contain only letters and numbers.");
+                return BadRequest(ErrorMessages.InvalidUsernameFormat);
             }
 
             if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$"))
             {
-                return BadRequest("Password must be at least 5 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.");
+                return BadRequest(ErrorMessages.InvalidPasswordFormat);
             }
 
             var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email);
@@ -82,15 +62,15 @@ namespace BookStoreMainSup.Controllers
 
             if (emailExists && usernameExists)
             {
-                return BadRequest("Email and Username both exist. Existing User? Try signing in.");
+                return BadRequest(ErrorMessages.EmailAndUsernameExists);
             }
             if (emailExists)
             {
-                return BadRequest("Email already exists. Existing User? Try signing in.");
+                return BadRequest(ErrorMessages.EmailExists);
             }
             if (usernameExists)
             {
-                return BadRequest("Username already exists. Existing User? Try signing in.");
+                return BadRequest(ErrorMessages.UsernameExists);
             }
 
             var user = new User
@@ -112,7 +92,7 @@ namespace BookStoreMainSup.Controllers
         {
             if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest("All fields are required.");
+                return BadRequest(ErrorMessages.RequiredFields);
             }
 
             var user = await _db.Users
@@ -120,7 +100,7 @@ namespace BookStoreMainSup.Controllers
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                return BadRequest("Invalid credentials.");
+                return BadRequest(ErrorMessages.InvalidCredentials);
             }
 
             var token = GenerateJwtToken(user);
