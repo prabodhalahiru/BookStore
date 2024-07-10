@@ -112,6 +112,7 @@ namespace BookStoreMainSup.Controllers
             return StatusCode(201, book);
         }
 
+        // Increment the sell count of the book
         private void UpdateBookSellCount(Books book)
         {
             book.SellCount = book.SellCount + 1;
@@ -123,6 +124,7 @@ namespace BookStoreMainSup.Controllers
             return _db.Books.Any(e => e.Id == id);
         }
 
+        // Calculate the discount based on the number of books sold
         private double CalculateDiscount(Books book)
         {
             double newPercentage = book.Discount + (5 * (book.SellCount - 3));
@@ -139,6 +141,7 @@ namespace BookStoreMainSup.Controllers
             return newPercentage;
         }
 
+        // Map the Books object to BooksDto object
         private BooksDto MapBooksdto(Books book, double newPercentage)
         {
             var part = book.Author.Split(" ");

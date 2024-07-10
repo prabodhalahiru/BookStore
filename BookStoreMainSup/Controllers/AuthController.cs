@@ -6,6 +6,11 @@ using BookStoreMainSup.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BookStoreMainSup.Services;
+using BookStoreMainSup.Controllers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
+
 
 namespace BookStoreMainSup.Controllers
 {
@@ -16,12 +21,17 @@ namespace BookStoreMainSup.Controllers
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _configuration;
 
-        public AuthController(ApplicationDbContext db, IConfiguration configuration)
+        //Injecting the TokenRevocationService
+        public AuthController(ApplicationDbContext db, IConfiguration configuration, ITokenRevocationService tokenRevocationService)
         {
             _db = db;
             _configuration = configuration;
+            _tokenRevocationService = tokenRevocationService;
         }
 
+        private readonly ITokenRevocationService _tokenRevocationService;
+
+        ///Register a new user
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserDto request)
         {
@@ -43,10 +53,12 @@ namespace BookStoreMainSup.Controllers
             return Ok(new { message = "User registered successfully" });
         }
 
+        //user login api
         [HttpPost("login")]
-        public async Task<IActionResult> Login(UserDto request)
+        public async Task<IActionResult> Login(UserLoginDto request)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => (u.Email == request.Identifier || u.Username == request.Identifier));
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
@@ -58,6 +70,7 @@ namespace BookStoreMainSup.Controllers
             return Ok(new { token });
         }
 
+        //generate jwt token
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -79,5 +92,22 @@ namespace BookStoreMainSup.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        //logout user
+        [HttpPost("logout")]
+        [Authorize]
+        public IActionResult Logout()
+        {
+            var authHeader = Request.Headers["Authorization"].ToString();
+            if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                _tokenRevocationService.RevokeToken(token);
+                return Ok(new { message = "User logged out successfully" });
+            }
+
+            return BadRequest(new { message = "User not logged in" });
+        }
+
     }
 }
