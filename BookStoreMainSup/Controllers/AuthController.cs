@@ -10,6 +10,7 @@ using BookStoreMainSup.Services;
 using BookStoreMainSup.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
+using System.Text.RegularExpressions;
 
 
 namespace BookStoreMainSup.Controllers
@@ -32,12 +33,64 @@ namespace BookStoreMainSup.Controllers
         private readonly ITokenRevocationService _tokenRevocationService;
 
         ///Register a new user
+        //[HttpPost("register")]
+        //public async Task<IActionResult> Register(UserDto request)
+        //{
+        //    if (await _db.Users.AnyAsync(u => u.Email == request.Email || u.Username == request.Username))
+        //    {
+        //        return BadRequest("User already exists.");
+        //    }
+
+        //    var user = new User
+        //    {
+        //        Username = request.Username,
+        //        Email = request.Email,
+        //        PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+        //    };
+
+        //    _db.Users.Add(user);
+        //    await _db.SaveChangesAsync();
+
+        //    return Ok(new { message = "User registered successfully" });
+        //}
+
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserDto request)
         {
-            if (await _db.Users.AnyAsync(u => u.Email == request.Email || u.Username == request.Username))
+            if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest("User already exists.");
+                return BadRequest("All fields are required.");
+            }
+
+            if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return BadRequest("Invalid email format.");
+            }
+
+            if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
+            {
+                return BadRequest("Username must be between 3 and 20 characters and contain only letters and numbers.");
+            }
+
+            if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$"))
+            {
+                return BadRequest("Password must be at least 5 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character.");
+            }
+
+            var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email);
+            var usernameExists = await _db.Users.AnyAsync(u => u.Username == request.Username);
+
+            if (emailExists && usernameExists)
+            {
+                return BadRequest("Email and Username both exist. Existing User? Try signing in.");
+            }
+            if (emailExists)
+            {
+                return BadRequest("Email already exists. Existing User? Try signing in.");
+            }
+            if (usernameExists)
+            {
+                return BadRequest("Username already exists. Existing User? Try signing in.");
             }
 
             var user = new User
@@ -57,6 +110,11 @@ namespace BookStoreMainSup.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDto request)
         {
+            if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest("All fields are required.");
+            }
+
             var user = await _db.Users
                 .FirstOrDefaultAsync(u => (u.Email == request.Identifier || u.Username == request.Identifier));
 
@@ -69,6 +127,7 @@ namespace BookStoreMainSup.Controllers
 
             return Ok(new { token });
         }
+
 
         //generate jwt token
         private string GenerateJwtToken(User user)
