@@ -81,24 +81,32 @@ namespace BookStoreMainSup.Controllers
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
         {
-            if (string.IsNullOrEmpty(query))
+            if (string.IsNullOrWhiteSpace(query))
             {
                 return BadRequest("Query parameter is required.");
             }
 
-            // Fetch all books from the database
-            var allBooks = await _db.Books.ToListAsync();
-
             // Split the query into individual words and convert to lowercase
-            var words = query.Split(' ').Select(word => word.ToLower());
+            var words = query.Split(new char[] { ' ', '\u200E' }, StringSplitOptions.RemoveEmptyEntries)
+                             .Select(word => word.ToLower());
 
-            // Filter the books in memory, ignoring case sensitivity
-            var filteredBooks = allBooks
-                .Where(b => words.Any(word => b.Title.ToLower().Contains(word) || b.Author.ToLower().Contains(word) || b.isbn.ToLower().Contains(word)))
-                .ToList();
+            // Build the query to filter the books in the database
+            var filteredBooksQuery = _db.Books.AsQueryable();
+
+            foreach (var word in words)
+            {
+                // Filter the books based on the title, author, and ISBN using the LIKE operator
+                filteredBooksQuery = filteredBooksQuery.Where(b =>
+                    EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
+                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
+                    EF.Functions.Like(b.isbn.ToLower(), $"%{word}%"));
+            }
+
+            var filteredBooks = await filteredBooksQuery.ToListAsync();
 
             return Ok(filteredBooks);
         }
+
 
         // POST: api/Books
         [Authorize]
@@ -112,6 +120,7 @@ namespace BookStoreMainSup.Controllers
             return StatusCode(201, book);
         }
 
+        // Increment the sell count of the book
         private void UpdateBookSellCount(Books book)
         {
             book.SellCount = book.SellCount + 1;
@@ -123,6 +132,7 @@ namespace BookStoreMainSup.Controllers
             return _db.Books.Any(e => e.Id == id);
         }
 
+        // Calculate the discount based on the number of books sold
         private double CalculateDiscount(Books book)
         {
             double newPercentage = book.Discount + (5 * (book.SellCount - 3));
@@ -139,6 +149,7 @@ namespace BookStoreMainSup.Controllers
             return newPercentage;
         }
 
+        // Map the Books object to BooksDto object
         private BooksDto MapBooksdto(Books book, double newPercentage)
         {
             var part = book.Author.Split(" ");
