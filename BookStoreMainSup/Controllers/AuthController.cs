@@ -6,28 +6,71 @@ using BookStoreMainSup.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BookStoreMainSup.Services;
+using BookStoreMainSup.Controllers;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authorization;
+using System.Text.RegularExpressions;
+using BookStoreMainSup.Resources;
+
 
 namespace BookStoreMainSup.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
         private readonly IConfiguration _configuration;
 
-        public AuthController(ApplicationDbContext db, IConfiguration configuration)
+        //Injecting the TokenRevocationService
+        public AuthController(ApplicationDbContext db, IConfiguration configuration, ITokenRevocationService tokenRevocationService)
         {
             _db = db;
             _configuration = configuration;
+            _tokenRevocationService = tokenRevocationService;
         }
 
+        private readonly ITokenRevocationService _tokenRevocationService;
+
+        ///Register a new user
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserDto request)
         {
-            if (await _db.Users.AnyAsync(u => u.Email == request.Email || u.Username == request.Username))
+            if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest("User already exists.");
+                return BadRequest(ErrorMessages.RequiredFields);
+            }
+
+            if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return BadRequest(ErrorMessages.InvalidEmailFormat);
+            }
+
+            if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
+            {
+                return BadRequest(ErrorMessages.InvalidUsernameFormat);
+            }
+
+            if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$"))
+            {
+                return BadRequest(ErrorMessages.InvalidPasswordFormat);
+            }
+
+            var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email);
+            var usernameExists = await _db.Users.AnyAsync(u => u.Username == request.Username);
+
+            if (emailExists && usernameExists)
+            {
+                return BadRequest(ErrorMessages.EmailAndUsernameExists);
+            }
+            if (emailExists)
+            {
+                return BadRequest(ErrorMessages.EmailExists);
+            }
+            if (usernameExists)
+            {
+                return BadRequest(ErrorMessages.UsernameExists);
             }
 
             var user = new User
@@ -43,14 +86,21 @@ namespace BookStoreMainSup.Controllers
             return Ok(new { message = "User registered successfully" });
         }
 
+        //user login api
         [HttpPost("login")]
-        public async Task<IActionResult> Login(UserDto request)
+        public async Task<IActionResult> Login(UserLoginDto request)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest(ErrorMessages.RequiredFields);
+            }
+
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => (u.Email == request.Identifier || u.Username == request.Identifier));
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                return BadRequest("Invalid credentials.");
+                return BadRequest(ErrorMessages.InvalidCredentials);
             }
 
             var token = GenerateJwtToken(user);
@@ -58,6 +108,8 @@ namespace BookStoreMainSup.Controllers
             return Ok(new { token });
         }
 
+
+        //generate jwt token
         private string GenerateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -79,5 +131,22 @@ namespace BookStoreMainSup.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             return tokenHandler.WriteToken(token);
         }
+
+        //logout user
+        [HttpPost("logout")]
+        [Authorize]
+        public IActionResult Logout()
+        {
+            var authHeader = Request.Headers["Authorization"].ToString();
+            if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                _tokenRevocationService.RevokeToken(token);
+                return Ok(new { message = "User logged out successfully" });
+            }
+
+            return BadRequest(new { message = "User not logged in" });
+        }
+
     }
 }
