@@ -82,6 +82,19 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price should be greater than 0");
             }
 
+            //Retrieve excisting book data
+            var existingBook = await _db.Books.FindAsync(id);
+            if ((existingBook == null))
+            {
+                return NotFound();
+            }
+
+            //Checking whether sellcount has modified
+            if(existingBook.SellCount != book.SellCount)
+            {
+                return BadRequest("You cannot update the sellcount");
+            }
+
             _db.Entry(book).State = EntityState.Modified;
 
             try
