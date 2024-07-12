@@ -95,6 +95,16 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("You cannot update the sellcount");
             }
 
+            //Checking whether same isbn number is updating
+            var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
+            if (availableISBN)
+            {
+                return BadRequest("This ISBN is available. ISBN should be unique");
+            }
+
+            // Detach the existing entity to avoid tracking issues
+            _db.Entry(existingBook).State = EntityState.Detached;
+
             _db.Entry(book).State = EntityState.Modified;
 
             try
