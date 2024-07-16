@@ -125,7 +125,49 @@ namespace BookStoreMainSup.Controllers
             return Ok(filteredBooks);
         }
 
+        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
+        [HttpGet("sortbyrange")]
+        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double minPrice, double maxPrice, string order = "asc")
+        {
+            if (minPrice < 0 || maxPrice < 0)
+            {
+                return BadRequest("Price should have a positive value");
+            }
+            else if (minPrice > maxPrice) 
+            {
+                return BadRequest("maxPrice should be greater than minPrice");
+            }
+                
+            try
+            {
+                var allBooks = await _db.Books.ToListAsync();
 
+                //Filter books by price range
+                var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+
+                //Sort books by order
+                List<Books> sortedBooks;
+                if (order.ToLower() == "desc")
+                {
+                    sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
+                }
+                else if (order.ToLower() == "sales")
+                {
+                    sortedBooks = booksInRange.OrderByDescending(b => b.SellCount).ToList();
+                }
+                else
+                {
+                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+                }
+
+                return Ok(sortedBooks);
+            }
+            catch (Exception ex) 
+            { 
+                return StatusCode(500, ex.Message);
+            }
+            
+        }
 
         // POST: api/Books
         [Authorize]

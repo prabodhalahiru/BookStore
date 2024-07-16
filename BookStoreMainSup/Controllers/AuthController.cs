@@ -14,7 +14,7 @@ using BookStoreMainSup.Resources;
 
 namespace BookStoreMainSup.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthController : ControllerBase
     {
