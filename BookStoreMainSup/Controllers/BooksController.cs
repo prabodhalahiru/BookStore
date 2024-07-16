@@ -233,17 +233,14 @@ namespace BookStoreMainSup.Controllers
         [HttpDelete("{isbn}")]
         public async Task<IActionResult> DeleteBook(string isbn)
         {
-            var book = await _db.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
+            var result = await _db.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
 
-            if (book == null)
+            if (result == 0)
             {
-                return NotFound();
+                return BadRequest("Please Enter the Correct ISBN");
             }
 
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync();
-
-            return Ok(book);
+        return Ok(new { Message = "Book deleted successfully", Isbn = isbn });
         }
 
     }
