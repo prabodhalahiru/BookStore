@@ -11,5 +11,7 @@
         public const string EmailAndUsernameExists = "Email and Username both exist. Try signing in.";
         public const string InvalidCredentials = "Invalid credentials.";
         public const string UserNotLoggedIn = "User not logged in.";
+        public const string KeywordRequired = "Keyword is required.";
+        public const string InvalidKeywordFormat = "Keyword must contain only letters and numbers.";
     }
 }
