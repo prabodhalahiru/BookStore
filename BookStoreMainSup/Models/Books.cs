@@ -9,6 +9,7 @@
         public string isbn { get; set; }
         public double Discount { get; set; }
         public int SellCount { get; set; }
+        public int PurchaseCount { get; set; }
 
     }
 }

@@ -14,13 +14,16 @@ namespace BookStoreMainSup.Controllers
 {
     [Route("api/books")]
     [ApiController]
+
     public class BooksController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
+        private readonly ILogger<BooksController> _logger;
 
-        public BooksController(ApplicationDbContext db)
+        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         //Get: api/Books
@@ -55,12 +58,58 @@ namespace BookStoreMainSup.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
+            _logger.LogInformation($"Updating book with ID {id}");
+
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest(ModelState);
+            //}
+
+            //if (!isValidISBN(book.isbn))
+            //{
+            //    return BadRequest("Invalid ISBN");
+            //}
+
             //Setting the ID from the URL to book object
             book.Id = id;
+
             if (id != book.Id)
             {
-                return BadRequest();
+                return BadRequest("The ID in the URL does not match the ID in the body.");
             }
+
+            if (string.IsNullOrEmpty(book.isbn))
+            {
+                return BadRequest("You should enter ISBN Number");
+            }
+            
+            if(!(book.Price > 0))
+            {
+                return BadRequest("Price should be greater than 0");
+            }
+
+            //Retrieve excisting book data
+            var existingBook = await _db.Books.FindAsync(id);
+            if ((existingBook == null))
+            {
+                return NotFound();
+            }
+
+            //Checking whether sellcount has modified
+            if(existingBook.SellCount != book.SellCount)
+            {
+                return BadRequest("You cannot update the sellcount");
+            }
+
+            //Checking whether same isbn number is updating
+            var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
+            if (availableISBN)
+            {
+                return BadRequest("This ISBN is available. ISBN should be unique");
+            }
+
+            // Detach the existing entity to avoid tracking issues
+            _db.Entry(existingBook).State = EntityState.Detached;
 
             _db.Entry(book).State = EntityState.Modified;
 
@@ -68,7 +117,7 @@ namespace BookStoreMainSup.Controllers
             {
                 await _db.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch
             {
                 if (!BookExists(id))
                 {
@@ -172,16 +221,49 @@ namespace BookStoreMainSup.Controllers
         // POST: api/Books
         [Authorize]
         [HttpPost]
+        [Authorize]
+        [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
-            _db.Books.Add(book);
-            await _db.SaveChangesAsync();
+            // Check if the model state is valid
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (string.IsNullOrEmpty(book.Title) || string.IsNullOrEmpty(book.Author))
+            {
+                return BadRequest("Title or Author fields are required.");
+            }
+            if (book.Price <= 0)
+            {
+                return BadRequest("Price must be greater than zero.");
+            }
 
-            // Return 201 Created with the book object
-            return StatusCode(201, book);
+            var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
+            if (existingBook != null)
+            {
+                return BadRequest("A book with this ISBN already exists.");
+            }
+
+            try
+            {
+                _db.Books.Add(book);
+                await _db.SaveChangesAsync();
+
+                // Return 201 Created with the book object
+                return StatusCode(201, book);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while saving your book.");
+            }
         }
 
-        // Increment the sell count of the book
+        private bool isValidISBN(string isbn)
+        {
+            return !string.IsNullOrEmpty(isbn);
+        }
+
         private void UpdateBookSellCount(Books book)
         {
             book.SellCount = book.SellCount + 1;
@@ -233,17 +315,14 @@ namespace BookStoreMainSup.Controllers
         [HttpDelete("{isbn}")]
         public async Task<IActionResult> DeleteBook(string isbn)
         {
-            var book = await _db.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
+            var result = await _db.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
 
-            if (book == null)
+            if (result == 0)
             {
-                return NotFound();
+                return BadRequest("Please Enter the Correct ISBN");
             }
 
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync();
-
-            return Ok(book);
+        return Ok(new { Message = "Book deleted successfully", Isbn = isbn });
         }
 
     }
