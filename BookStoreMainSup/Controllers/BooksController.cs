@@ -88,6 +88,21 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price should be greater than 0");
             }
 
+            if (book.isbn.Length <= 10)
+            {
+                return BadRequest("The length of ISBN should greater than 10");
+            }
+
+            if (book.isbn.Length >= 13)
+            {
+                return BadRequest("The length of ISBN should less than 13");
+            }
+
+            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            {
+                return BadRequest("ISBN should be a number");
+            }
+
             //Retrieve excisting book data
             var existingBook = await _db.Books.FindAsync(id);
             if ((existingBook == null))
@@ -221,8 +236,6 @@ namespace BookStoreMainSup.Controllers
         // POST: api/Books
         [Authorize]
         [HttpPost]
-        [Authorize]
-        [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
             // Check if the model state is valid
@@ -237,6 +250,20 @@ namespace BookStoreMainSup.Controllers
             if (book.Price <= 0)
             {
                 return BadRequest("Price must be greater than zero.");
+            }
+            if (book.isbn.Length <= 10)
+            {
+                return BadRequest("The length of ISBN should greater than 10");
+            }
+
+            if (book.isbn.Length >= 13)
+            {
+                return BadRequest("The length of ISBN should less than 13");
+            }
+
+            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            {
+                return BadRequest("ISBN should be a number");
             }
 
             var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
