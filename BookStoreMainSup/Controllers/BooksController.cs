@@ -6,7 +6,9 @@ using BookStoreMainSup.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BookStoreMainSup.Resources;
 using System.Text.RegularExpressions;
+using System;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -127,11 +129,19 @@ namespace BookStoreMainSup.Controllers
 
         // GET: api/Books/search?query=keyword
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
+        [DisableRequestSizeLimit]
+        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks()
         {
+            var query = HttpContext.Request.Query["query"].ToString();
+
             if (string.IsNullOrWhiteSpace(query))
             {
-                return BadRequest("Query parameter is required.");
+                return BadRequest(new { message = ErrorMessages.KeywordRequired });
+            }
+
+            if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
+            {
+                return BadRequest(new { message = ErrorMessages.InvalidKeywordFormat });
             }
 
             // Split the query into individual words and convert to lowercase
@@ -152,11 +162,14 @@ namespace BookStoreMainSup.Controllers
 
             var filteredBooks = await filteredBooksQuery.ToListAsync();
 
+            if (filteredBooks.Count == 0)
+            {
+                return NotFound(new { message = "No Records found" });
+            }
+
             return Ok(filteredBooks);
         }
 
-
-      
         // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
         [HttpGet("sortbyrange")]
         public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double minPrice, double maxPrice, string order = "asc")
@@ -200,8 +213,6 @@ namespace BookStoreMainSup.Controllers
             }
             
         }
-
-
 
         // POST: api/Books
         [Authorize]
@@ -271,17 +282,14 @@ namespace BookStoreMainSup.Controllers
         [HttpDelete("{isbn}")]
         public async Task<IActionResult> DeleteBook(string isbn)
         {
-            var book = await _db.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
+            var result = await _db.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
 
-            if (book == null)
+            if (result == 0)
             {
-                return NotFound();
+                return BadRequest("Please Enter the Correct ISBN");
             }
 
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync();
-
-            return Ok(book);
+        return Ok(new { Message = "Book deleted successfully", Isbn = isbn });
         }
 
     }

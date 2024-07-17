@@ -7,12 +7,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BookStoreMainSup.Services;
-using BookStoreMainSup.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.RegularExpressions;
 using BookStoreMainSup.Resources;
-
 
 namespace BookStoreMainSup.Controllers
 {
@@ -98,16 +96,20 @@ namespace BookStoreMainSup.Controllers
             var user = await _db.Users
                 .FirstOrDefaultAsync(u => (u.Email == request.Identifier || u.Username == request.Identifier));
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            if (user == null)
             {
-                return BadRequest(ErrorMessages.InvalidCredentials);
+                return Unauthorized(ErrorMessages.InvalidCredentials);
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                return Unauthorized(ErrorMessages.InvalidCredentials);
             }
 
             var token = GenerateJwtToken(user);
 
             return Ok(new { token });
         }
-
 
         //generate jwt token
         private string GenerateJwtToken(User user)
@@ -123,7 +125,6 @@ namespace BookStoreMainSup.Controllers
                     new Claim(ClaimTypes.Email, user.Email)
                 }),
                 Expires = DateTime.UtcNow.AddHours(1),
-                //Expires = DateTime.UtcNow.AddSeconds(20),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -147,6 +148,5 @@ namespace BookStoreMainSup.Controllers
 
             return BadRequest(new { message = "User not logged in" });
         }
-
     }
 }
