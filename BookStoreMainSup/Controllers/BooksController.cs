@@ -14,13 +14,16 @@ namespace BookStoreMainSup.Controllers
 {
     [Route("api/books")]
     [ApiController]
+
     public class BooksController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
+        private readonly ILogger<BooksController> _logger;
 
-        public BooksController(ApplicationDbContext db)
+        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
         {
             _db = db;
+            _logger = logger;
         }
 
         //Get: api/Books
@@ -55,6 +58,7 @@ namespace BookStoreMainSup.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
+            _logger.LogInformation($"Updating book with ID {id}");
 
             //if (!ModelState.IsValid)
             //{
