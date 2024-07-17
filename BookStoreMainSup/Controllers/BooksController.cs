@@ -221,13 +221,42 @@ namespace BookStoreMainSup.Controllers
         // POST: api/Books
         [Authorize]
         [HttpPost]
+        [Authorize]
+        [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
-            _db.Books.Add(book);
-            await _db.SaveChangesAsync();
+            // Check if the model state is valid
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (string.IsNullOrEmpty(book.Title) || string.IsNullOrEmpty(book.Author))
+            {
+                return BadRequest("Title or Author fields are required.");
+            }
+            if (book.Price <= 0)
+            {
+                return BadRequest("Price must be greater than zero.");
+            }
 
-            // Return 201 Created with the book object
-            return StatusCode(201, book);
+            var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
+            if (existingBook != null)
+            {
+                return BadRequest("A book with this ISBN already exists.");
+            }
+
+            try
+            {
+                _db.Books.Add(book);
+                await _db.SaveChangesAsync();
+
+                // Return 201 Created with the book object
+                return StatusCode(201, book);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An error occurred while saving your book.");
+            }
         }
 
         private bool isValidISBN(string isbn)
