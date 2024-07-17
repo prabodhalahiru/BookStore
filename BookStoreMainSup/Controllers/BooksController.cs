@@ -55,12 +55,57 @@ namespace BookStoreMainSup.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
+
+            //if (!ModelState.IsValid)
+            //{
+            //    return BadRequest(ModelState);
+            //}
+
+            //if (!isValidISBN(book.isbn))
+            //{
+            //    return BadRequest("Invalid ISBN");
+            //}
+
             //Setting the ID from the URL to book object
             book.Id = id;
+
             if (id != book.Id)
             {
-                return BadRequest();
+                return BadRequest("The ID in the URL does not match the ID in the body.");
             }
+
+            if (string.IsNullOrEmpty(book.isbn))
+            {
+                return BadRequest("You should enter ISBN Number");
+            }
+            
+            if(!(book.Price > 0))
+            {
+                return BadRequest("Price should be greater than 0");
+            }
+
+            //Retrieve excisting book data
+            var existingBook = await _db.Books.FindAsync(id);
+            if ((existingBook == null))
+            {
+                return NotFound();
+            }
+
+            //Checking whether sellcount has modified
+            if(existingBook.SellCount != book.SellCount)
+            {
+                return BadRequest("You cannot update the sellcount");
+            }
+
+            //Checking whether same isbn number is updating
+            var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
+            if (availableISBN)
+            {
+                return BadRequest("This ISBN is available. ISBN should be unique");
+            }
+
+            // Detach the existing entity to avoid tracking issues
+            _db.Entry(existingBook).State = EntityState.Detached;
 
             _db.Entry(book).State = EntityState.Modified;
 
@@ -68,7 +113,7 @@ namespace BookStoreMainSup.Controllers
             {
                 await _db.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch
             {
                 if (!BookExists(id))
                 {
@@ -181,7 +226,11 @@ namespace BookStoreMainSup.Controllers
             return StatusCode(201, book);
         }
 
-        // Increment the sell count of the book
+        private bool isValidISBN(string isbn)
+        {
+            return !string.IsNullOrEmpty(isbn);
+        }
+
         private void UpdateBookSellCount(Books book)
         {
             book.SellCount = book.SellCount + 1;
