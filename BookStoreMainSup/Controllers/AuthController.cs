@@ -81,7 +81,8 @@ namespace BookStoreMainSup.Controllers
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            return Ok(new { message = "User registered successfully" });
+            //return Ok(new { message = "User registered successfully" });
+            return Created("", new { message = "User registered successfully" });
         }
 
         //user login api
