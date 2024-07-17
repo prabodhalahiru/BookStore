@@ -266,7 +266,7 @@ namespace BookStoreMainSup.Controllers
 
         private void UpdateBookSellCount(Books book)
         {
-            book.SellCount = book.SellCount + 1;
+            book.SellCount = book.SellCount;
             _db.Entry(book).State = EntityState.Modified;
         }
 
