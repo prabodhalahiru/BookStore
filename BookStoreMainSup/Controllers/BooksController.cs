@@ -60,16 +60,6 @@ namespace BookStoreMainSup.Controllers
         {
             _logger.LogInformation($"Updating book with ID {id}");
 
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-
-            //if (!isValidISBN(book.isbn))
-            //{
-            //    return BadRequest("Invalid ISBN");
-            //}
-
             //Setting the ID from the URL to book object
             book.Id = id;
 
@@ -81,6 +71,11 @@ namespace BookStoreMainSup.Controllers
             if (string.IsNullOrEmpty(book.isbn))
             {
                 return BadRequest("You should enter ISBN Number");
+            }
+
+            if (!(isbnAlphanumericCheck(book.isbn)))
+            {
+                return BadRequest("ISBN Should be only contains letters and numbers");
             }
             
             if(!(book.Price > 0))
@@ -233,6 +228,11 @@ namespace BookStoreMainSup.Controllers
         private bool isValidISBN(string isbn)
         {
             return !string.IsNullOrEmpty(isbn);
+        }
+
+        private bool isbnAlphanumericCheck(string isbn)
+        {
+            return Regex.IsMatch(isbn, @"^[a-zA-Z0-9]+$");
         }
 
         private void UpdateBookSellCount(Books book)
