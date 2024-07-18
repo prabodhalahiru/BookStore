@@ -191,8 +191,12 @@ namespace BookStoreMainSup.Controllers
 
         // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
         [HttpGet("sortbyrange")]
-        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double minPrice, double maxPrice, string order = "asc")
+        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
         {
+            if (!minPrice.HasValue || !maxPrice.HasValue)
+            {
+                return BadRequest("minPrice or maxPrice cannot be Null");
+            }
             if (minPrice < 0 || maxPrice < 0)
             {
                 return BadRequest("Price should have a positive value");
@@ -200,8 +204,12 @@ namespace BookStoreMainSup.Controllers
             else if (minPrice > maxPrice) 
             {
                 return BadRequest("maxPrice should be greater than minPrice");
-            }
-                
+            }     
+            if (string.IsNullOrEmpty(order))
+            {
+                order = "asc";
+            } 
+
             try
             {
                 var allBooks = await _db.Books.ToListAsync();
@@ -215,13 +223,13 @@ namespace BookStoreMainSup.Controllers
                 {
                     sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
                 }
-                else if (order.ToLower() == "sales")
+                else if (order.ToLower() == "asc")
                 {
-                    sortedBooks = booksInRange.OrderByDescending(b => b.SellCount).ToList();
+                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
                 }
                 else
                 {
-                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+                    return BadRequest("Invalid order method");
                 }
 
                 return Ok(sortedBooks);
