@@ -88,6 +88,11 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price should be greater than 0");
             }
 
+            if (book.Discount > book.Price)
+            {
+                return BadRequest("Price must be greater than Discount.");
+            }
+
             if (book.isbn.Length <= 10)
             {
                 return BadRequest("The length of ISBN should greater than 10");
@@ -258,6 +263,10 @@ namespace BookStoreMainSup.Controllers
             if (book.Price <= 0)
             {
                 return BadRequest("Price must be greater than zero.");
+            }
+            if (book.Discount > book.Price)
+            {
+                return BadRequest("Price must be greater than Discount.");
             }
             if (book.isbn.Length <= 10)
             {
