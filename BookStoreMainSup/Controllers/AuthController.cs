@@ -82,7 +82,6 @@ namespace BookStoreMainSup.Controllers
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
 
-            //return Ok(new { message = "User registered successfully" });
             return Created("", new { message = "User registered successfully" });
         }
 
@@ -126,6 +125,7 @@ namespace BookStoreMainSup.Controllers
                     new Claim(ClaimTypes.Name, user.Username),
                     new Claim(ClaimTypes.Email, user.Email)
                 }),
+                //Expires = DateTime.UtcNow.AddSeconds(20),
                 Expires = DateTime.UtcNow.AddHours(1),
                 Issuer = _configuration["Jwt:Issuer"],
                 Audience = _configuration["Jwt:Audience"],
