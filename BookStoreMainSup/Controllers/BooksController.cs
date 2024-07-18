@@ -90,7 +90,7 @@ namespace BookStoreMainSup.Controllers
 
             if (book.Discount > book.Price)
             {
-                return BadRequest("Discount must be less than Price.");
+                return BadRequest("Price must be greater than Discount.");
             }
 
             if (book.isbn.Length <= 10)
