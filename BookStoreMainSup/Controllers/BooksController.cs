@@ -60,16 +60,6 @@ namespace BookStoreMainSup.Controllers
         {
             _logger.LogInformation($"Updating book with ID {id}");
 
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-
-            //if (!isValidISBN(book.isbn))
-            //{
-            //    return BadRequest("Invalid ISBN");
-            //}
-
             //Setting the ID from the URL to book object
             book.Id = id;
 
@@ -280,7 +270,7 @@ namespace BookStoreMainSup.Controllers
                 // Return 201 Created with the book object
                 return StatusCode(201, book);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, "An error occurred while saving your book.");
             }

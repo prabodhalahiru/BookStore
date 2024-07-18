@@ -31,8 +31,9 @@ namespace BookStoreMainSup.Controllers
 
         private readonly ITokenRevocationService _tokenRevocationService;
 
-        ///Register a new user
+        //Register a new user
         [HttpPost("register")]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> Register(UserDto request)
         {
             if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
