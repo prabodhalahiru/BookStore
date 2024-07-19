@@ -48,6 +48,33 @@ builder.Services.AddAuthentication(options =>
             }
 
             return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            string errorMessage = "User unauthorized";
+            if (context.AuthenticateFailure != null)
+            {
+                if (context.AuthenticateFailure.GetType() == typeof(SecurityTokenExpiredException))
+                {
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "text/plain";
+                    errorMessage = "Token is expired";
+                }
+                else if (context.AuthenticateFailure.Message == "This token has been revoked.")
+                {
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "text/plain";
+                    errorMessage = "Token has been revoked";
+                }
+                else
+                {
+                    context.Response.StatusCode = 401;
+                    context.Response.ContentType = "text/plain";
+                }
+            }
+
+            return context.Response.WriteAsync(errorMessage);
         }
     };
 });

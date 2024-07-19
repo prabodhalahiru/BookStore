@@ -83,6 +83,26 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price should be greater than 0");
             }
 
+            if (book.Discount > book.Price)
+            {
+                return BadRequest("Price must be greater than Discount.");
+            }
+
+            if (book.isbn.Length <= 10)
+            {
+                return BadRequest("The length of ISBN should greater than 10");
+            }
+
+            if (book.isbn.Length >= 13)
+            {
+                return BadRequest("The length of ISBN should less than 13");
+            }
+
+            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            {
+                return BadRequest("ISBN should be a number");
+            }
+
             //Retrieve excisting book data
             var existingBook = await _db.Books.FindAsync(id);
             if ((existingBook == null))
@@ -171,8 +191,12 @@ namespace BookStoreMainSup.Controllers
 
         // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
         [HttpGet("sortbyrange")]
-        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double minPrice, double maxPrice, string order = "asc")
+        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
         {
+            if (!minPrice.HasValue || !maxPrice.HasValue)
+            {
+                return BadRequest("minPrice or maxPrice cannot be Null");
+            }
             if (minPrice < 0 || maxPrice < 0)
             {
                 return BadRequest("Price should have a positive value");
@@ -180,8 +204,12 @@ namespace BookStoreMainSup.Controllers
             else if (minPrice > maxPrice) 
             {
                 return BadRequest("maxPrice should be greater than minPrice");
-            }
-                
+            }     
+            if (string.IsNullOrEmpty(order))
+            {
+                order = "asc";
+            } 
+
             try
             {
                 var allBooks = await _db.Books.ToListAsync();
@@ -195,13 +223,13 @@ namespace BookStoreMainSup.Controllers
                 {
                     sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
                 }
-                else if (order.ToLower() == "sales")
+                else if (order.ToLower() == "asc")
                 {
-                    sortedBooks = booksInRange.OrderByDescending(b => b.SellCount).ToList();
+                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
                 }
                 else
                 {
-                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+                    return BadRequest("Invalid order method");
                 }
 
                 return Ok(sortedBooks);
@@ -218,11 +246,56 @@ namespace BookStoreMainSup.Controllers
         [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
-            _db.Books.Add(book);
-            await _db.SaveChangesAsync();
+            // Check if the model state is valid
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (string.IsNullOrEmpty(book.Title) || string.IsNullOrEmpty(book.Author))
+            {
+                return BadRequest("Title or Author fields are required.");
+            }
+            if (book.Price <= 0)
+            {
+                return BadRequest("Price must be greater than zero.");
+            }
+            if (book.Discount > book.Price)
+            {
+                return BadRequest("Price must be greater than Discount.");
+            }
+            if (book.isbn.Length <= 10)
+            {
+                return BadRequest("The length of ISBN should greater than 10");
+            }
 
-            // Return 201 Created with the book object
-            return StatusCode(201, book);
+            if (book.isbn.Length >= 13)
+            {
+                return BadRequest("The length of ISBN should less than 13");
+            }
+
+            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            {
+                return BadRequest("ISBN should be a number");
+            }
+
+            var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
+            if (existingBook != null)
+            {
+                return BadRequest("A book with this ISBN already exists.");
+            }
+
+            try
+            {
+                _db.Books.Add(book);
+                await _db.SaveChangesAsync();
+
+                // Return 201 Created with the book object
+                return StatusCode(201, book);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "An error occurred while saving your book.");
+            }
         }
 
         private bool isValidISBN(string isbn)
@@ -237,7 +310,7 @@ namespace BookStoreMainSup.Controllers
 
         private void UpdateBookSellCount(Books book)
         {
-            book.SellCount = book.SellCount + 1;
+            book.SellCount = book.SellCount;
             _db.Entry(book).State = EntityState.Modified;
         }
 
