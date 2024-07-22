@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using BookStoreMainSup.Resources;
 using System.Text.RegularExpressions;
 using System;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -19,17 +20,26 @@ namespace BookStoreMainSup.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
+        private readonly ApplicationDbContext _context;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
+        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger, ApplicationDbContext context)
         {
             _db = db;
             _logger = logger;
+            _context = context;
         }
 
         //Get: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
         {
+            var books = await _context.Books.ToListAsync();
+
+            if (books == null || books.Count == 0)
+            {
+                return NotFound("No books available in the database.");
+            }
+
             return await _db.Books.ToListAsync();
         }
 
@@ -76,6 +86,11 @@ namespace BookStoreMainSup.Controllers
             if(!(book.Price > 0))
             {
                 return BadRequest("Price should be greater than 0");
+            }
+
+            if (!(book.Discount > 0))
+            {
+                return BadRequest("Discount should be greater than 0");
             }
 
             if (book.Discount > book.Price)
@@ -253,6 +268,10 @@ namespace BookStoreMainSup.Controllers
             if (book.Price <= 0)
             {
                 return BadRequest("Price must be greater than zero.");
+            }
+            if (!(book.Discount > 0))
+            {
+                return BadRequest("Discount should be greater than 0");
             }
             if (book.Discount > book.Price)
             {
