@@ -13,5 +13,10 @@
         public const string UserNotLoggedIn = "User not logged in.";
         public const string KeywordRequired = "Keyword is required.";
         public const string InvalidKeywordFormat = "Keyword must contain only letters and numbers.";
+        public const string PasswordLength = "Password must be at least 5 characters long.";
+        public const string PasswordScpecialCha = "Password must contain at least one special character.";
+        public const string PasswordNumb = "Password must contain at least one digit.";
+        public const string PasswordUpperCha = "Password must contain at least one uppercase letter.";
+        public const string PasswordLowerCha = "Password must contain at least one lowercase letter.";
     }
 }

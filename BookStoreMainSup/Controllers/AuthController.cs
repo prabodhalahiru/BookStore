@@ -51,10 +51,35 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(ErrorMessages.InvalidUsernameFormat);
             }
 
-            if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$"))
+            //if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`])[A-Za-z\d~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`]{5,}$"))
+            //{
+            //    return BadRequest(ErrorMessages.InvalidPasswordFormat);
+            //}
+            if (request.Password.Length < 5)
             {
-                return BadRequest(ErrorMessages.InvalidPasswordFormat);
+                return BadRequest(ErrorMessages.PasswordLength);
             }
+
+            if (!Regex.IsMatch(request.Password, @"[a-z]"))
+            {
+                return BadRequest(ErrorMessages.PasswordLowerCha);
+            }
+
+            if (!Regex.IsMatch(request.Password, @"[A-Z]"))
+            {
+                return BadRequest(ErrorMessages.PasswordUpperCha);
+            }
+
+            if (!Regex.IsMatch(request.Password, @"\d"))
+            {
+                return BadRequest(ErrorMessages.PasswordNumb);
+            }
+
+            if (!Regex.IsMatch(request.Password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`]"))
+            {
+                return BadRequest(ErrorMessages.PasswordScpecialCha);
+            }
+
 
             var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email);
             var usernameExists = await _db.Users.AnyAsync(u => u.Username == request.Username);
