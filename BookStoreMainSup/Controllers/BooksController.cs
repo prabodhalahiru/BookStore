@@ -54,11 +54,9 @@ namespace BookStoreMainSup.Controllers
                 return NotFound();
             }
 
-            UpdateBookSellCount(book);
             await _db.SaveChangesAsync();
 
-            double newPercentage = CalculateDiscount(book);
-            var booksDto = MapBooksdto(book, newPercentage);
+            var booksDto = MapBooksdto(book);
 
             return booksDto;
         }
@@ -78,7 +76,7 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("The ID in the URL does not match the ID in the body.");
             }
 
-            if (string.IsNullOrEmpty(book.isbn))
+            if (string.IsNullOrEmpty(book.isbn.ToString()))
             {
                 return BadRequest("You should enter ISBN Number");
             }
@@ -98,17 +96,17 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price must be greater than Discount.");
             }
 
-            if (book.isbn.Length <= 10)
+            if (book.isbn.ToString().Length <= 10)
             {
                 return BadRequest("The length of ISBN should greater than 10");
             }
 
-            if (book.isbn.Length >= 13)
+            if (book.isbn.ToString().Length >= 13)
             {
                 return BadRequest("The length of ISBN should less than 13");
             }
 
-            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
             {
                 return BadRequest("ISBN should be a number");
             }
@@ -118,12 +116,6 @@ namespace BookStoreMainSup.Controllers
             if ((existingBook == null))
             {
                 return NotFound();
-            }
-
-            //Checking whether sellcount has modified
-            if(existingBook.SellCount != book.SellCount)
-            {
-                return BadRequest("You cannot update the sellcount");
             }
 
             //Checking whether same isbn number is updating
@@ -185,8 +177,7 @@ namespace BookStoreMainSup.Controllers
                 // Filter the books based on the title, author, and ISBN using the LIKE operator
                 filteredBooksQuery = filteredBooksQuery.Where(b =>
                     EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
-                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
-                    EF.Functions.Like(b.isbn.ToLower(), $"%{word}%"));
+                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%"));
             }
 
             var filteredBooks = await filteredBooksQuery.ToListAsync();
@@ -277,17 +268,17 @@ namespace BookStoreMainSup.Controllers
             {
                 return BadRequest("Price must be greater than Discount.");
             }
-            if (book.isbn.Length <= 10)
+            if (book.isbn.ToString().Length <= 10)
             {
                 return BadRequest("The length of ISBN should greater than 10");
             }
 
-            if (book.isbn.Length >= 13)
+            if (book.isbn.ToString().Length >= 13)
             {
                 return BadRequest("The length of ISBN should less than 13");
             }
 
-            if (!Regex.IsMatch(book.isbn, @"^[0-9]+$"))
+            if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
             {
                 return BadRequest("ISBN should be a number");
             }
@@ -317,36 +308,13 @@ namespace BookStoreMainSup.Controllers
             return !string.IsNullOrEmpty(isbn);
         }
 
-        private void UpdateBookSellCount(Books book)
-        {
-            book.SellCount = book.SellCount;
-            _db.Entry(book).State = EntityState.Modified;
-        }
-
         private bool BookExists(int id)
         {
             return _db.Books.Any(e => e.Id == id);
         }
 
-        // Calculate the discount based on the number of books sold
-        private double CalculateDiscount(Books book)
-        {
-            double newPercentage = book.Discount + (5 * (book.SellCount - 3));
-
-            if (newPercentage < book.Discount)
-            {
-                newPercentage = book.Discount;
-            }
-            else if (newPercentage > 50)
-            {
-                newPercentage = 50;
-            }
-
-            return newPercentage;
-        }
-
         // Map the Books object to BooksDto object
-        private BooksDto MapBooksdto(Books book, double newPercentage)
+        private BooksDto MapBooksdto(Books book)
         {
             var part = book.Author.Split(" ");
 
@@ -356,9 +324,8 @@ namespace BookStoreMainSup.Controllers
                 Fname = part.Length > 0 ? part[0] : "",
                 Lname = part.Length > 1 ? part[1] : "",
                 Price = book.Price,
-                DiscountPrice = book.Price - (book.Price * newPercentage / 100),
-                discount = newPercentage,
-                SellCount = book.SellCount
+                DiscountPrice = book.Price - (book.Price * book.Discount / 100),
+                discount = book.Discount,
             };
 
             return booksDto;
