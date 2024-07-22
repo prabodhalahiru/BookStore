@@ -96,19 +96,9 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("Price must be greater than Discount.");
             }
 
-            if (book.isbn.ToString().Length <= 10)
+            if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
             {
-                return BadRequest("The length of ISBN should greater than 10");
-            }
-
-            if (book.isbn.ToString().Length >= 13)
-            {
-                return BadRequest("The length of ISBN should less than 13");
-            }
-
-            if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
-            {
-                return BadRequest("ISBN should be a number");
+                return BadRequest("The length of ISBN should greater than 10 and less than 13");
             }
 
             //Retrieve excisting book data
