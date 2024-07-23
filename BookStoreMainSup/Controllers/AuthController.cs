@@ -38,42 +38,42 @@ namespace BookStoreMainSup.Controllers
         {
             if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest(ErrorMessages.RequiredFields);
+                return BadRequest(new { message = ErrorMessages.RequiredFields });
             }
 
             if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
             {
-                return BadRequest(ErrorMessages.InvalidEmailFormat);
+                return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
             }
 
             if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
             {
-                return BadRequest(ErrorMessages.InvalidUsernameFormat);
+                return BadRequest(new { message = ErrorMessages.InvalidUsernameFormat });
             }
 
             if (request.Password.Length < 5)
             {
-                return BadRequest(ErrorMessages.PasswordLength);
+                return BadRequest(new { message = ErrorMessages.PasswordLength });
             }
 
             if (!Regex.IsMatch(request.Password, @"[a-z]"))
             {
-                return BadRequest(ErrorMessages.PasswordLowerCha);
+                return BadRequest(new { message = ErrorMessages.PasswordLowerCha });
             }
 
             if (!Regex.IsMatch(request.Password, @"[A-Z]"))
             {
-                return BadRequest(ErrorMessages.PasswordUpperCha);
+                return BadRequest(new { message = ErrorMessages.PasswordUpperCha });
             }
 
             if (!Regex.IsMatch(request.Password, @"\d"))
             {
-                return BadRequest(ErrorMessages.PasswordNumb);
+                return BadRequest(new { message = ErrorMessages.PasswordNumb });
             }
 
             if (!Regex.IsMatch(request.Password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`]"))
             {
-                return BadRequest(ErrorMessages.PasswordScpecialCha);
+                return BadRequest(new { message = ErrorMessages.PasswordScpecialCha });
             }
 
 
@@ -82,15 +82,15 @@ namespace BookStoreMainSup.Controllers
 
             if (emailExists && usernameExists)
             {
-                return BadRequest(ErrorMessages.EmailAndUsernameExists);
+                return BadRequest(new { message = ErrorMessages.EmailAndUsernameExists });
             }
             if (emailExists)
             {
-                return BadRequest(ErrorMessages.EmailExists);
+                return BadRequest(new { message = ErrorMessages.EmailExists });
             }
             if (usernameExists)
             {
-                return BadRequest(ErrorMessages.UsernameExists);
+                return BadRequest(new { message = ErrorMessages.UsernameExists });
             }
 
             var user = new User
@@ -112,7 +112,7 @@ namespace BookStoreMainSup.Controllers
         {
             if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
             {
-                return BadRequest(ErrorMessages.RequiredFields);
+                return BadRequest(new { message = ErrorMessages.RequiredFields });
             }
 
             var user = await _db.Users
@@ -120,12 +120,12 @@ namespace BookStoreMainSup.Controllers
 
             if (user == null)
             {
-                return Unauthorized(ErrorMessages.InvalidCredentials);
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials});
             }
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
-                return Unauthorized(ErrorMessages.InvalidCredentials);
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
             }
 
             var token = GenerateJwtToken(user);
