@@ -51,10 +51,6 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(ErrorMessages.InvalidUsernameFormat);
             }
 
-            //if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`])[A-Za-z\d~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`]{5,}$"))
-            //{
-            //    return BadRequest(ErrorMessages.InvalidPasswordFormat);
-            //}
             if (request.Password.Length < 5)
             {
                 return BadRequest(ErrorMessages.PasswordLength);
