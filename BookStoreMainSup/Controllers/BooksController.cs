@@ -82,52 +82,17 @@ namespace BookStoreMainSup.Controllers
         {
             _logger.LogInformation($"Updating book with ID {id}");
 
-            // Setting the ID from the URL to book object
-            book.Id = id;
-
-            if (id != book.Id)
-            {
-                return BadRequest(new { message = "The ID in the URL does not match the ID in the body." });
-            }
-
-            if (string.IsNullOrEmpty(book.isbn.ToString()))
-            {
-                return BadRequest(new { message = "You should enter ISBN Number" });
-            }
-
-            if (!(book.Price > 0))
-            {
-                return BadRequest(new { message = "Price should be greater than 0" });
-            }
-
-            if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
-            {
-                return BadRequest(new { message = "The length of ISBN should be greater than 10 and less than 13" });
-            }
-
             try
             {
-                // Retrieve existing book data
-                var existingBook = await _db.Books.FindAsync(id);
-                if (existingBook == null)
+                var result = await _booksService.UpdateBookAsync(id, book);
+                if (result.IsSuccess)
                 {
-                    return NotFound(new { message = "Book not found." });
+                    return Ok(result.Book);
                 }
-
-                // Checking whether same ISBN number is updating
-                var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
-                if (availableISBN)
+                else
                 {
-                    return BadRequest(new { message = "This ISBN is available. ISBN should be unique" });
+                    return BadRequest(new { message = result.ErrorMessage });
                 }
-
-                // Detach the existing entity to avoid tracking issues
-                _db.Entry(existingBook).State = EntityState.Detached;
-
-                _db.Entry(book).State = EntityState.Modified;
-
-                await _db.SaveChangesAsync();
-                return Ok(book);
             }
             catch (Exception ex)
             {
@@ -135,6 +100,7 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
+
 
         // GET: api/Books/search?query=keyword
         [HttpGet("search")]
