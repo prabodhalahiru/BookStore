@@ -97,7 +97,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while updating the book.");
-                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
+                return StatusCode(500, new { message = "Oops! Something went Wrong!" });
             }
         }
 

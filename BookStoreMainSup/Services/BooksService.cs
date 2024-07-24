@@ -155,7 +155,7 @@ public class BooksService
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "You should enter ISBN Number" };
         }
 
-        if (!(book.Price > 0))
+        if (!IsPositive(book.Price))
         {
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Price should be greater than 0" };
         }
@@ -176,7 +176,7 @@ public class BooksService
         var availableISBN = await _context.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
         if (availableISBN)
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. ISBN should be unique" };
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. Please update a unique ISBN" };
         }
 
         // Detach the existing entity to avoid tracking issues
@@ -194,4 +194,7 @@ public class BooksService
         var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
         return result > 0;
     }
+
+    private bool IsPositive(double value) => value > 0;
+    private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
 }
