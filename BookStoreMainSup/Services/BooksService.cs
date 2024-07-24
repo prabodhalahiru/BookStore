@@ -80,4 +80,57 @@ public class BooksService
 
         return true;
     }
+
+    public async Task<List<Books>> SearchBooksAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return await GetBooksAsync();
+        }
+
+        if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
+        {
+            throw new ArgumentException("Invalid keyword format.");
+        }
+
+        // Split the query into individual words and convert to lowercase
+        var words = query.Split(new char[] { ' ', '\u200E' }, StringSplitOptions.RemoveEmptyEntries)
+                         .Select(word => word.ToLower());
+
+        // Build the query to filter the books in the database
+        var filteredBooksQuery = _context.Books.AsQueryable();
+
+        foreach (var word in words)
+        {
+            // Filter the books based on the title, author, and ISBN using the LIKE operator
+            filteredBooksQuery = filteredBooksQuery.Where(b =>
+                EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
+                EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
+                EF.Functions.Like(b.isbn.ToString(), $"%{word}%"));
+        }
+
+        return await filteredBooksQuery.ToListAsync();
+    }
+
+    public async Task<List<Books>> AdvancedSearchAsync(string? title, string? author, string? isbn)
+    {
+        var query = _context.Books.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(title))
+        {
+            query = query.Where(b => EF.Functions.Like(b.Title, $"%{title}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(author))
+        {
+            query = query.Where(b => EF.Functions.Like(b.Author, $"%{author}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(isbn))
+        {
+            query = query.Where(b => EF.Functions.Like(b.isbn.ToString(), $"%{isbn}%"));
+        }
+
+        return await query.ToListAsync();
+    }
 }

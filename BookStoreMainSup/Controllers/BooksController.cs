@@ -144,47 +144,18 @@ namespace BookStoreMainSup.Controllers
             try
             {
                 var query = HttpContext.Request.Query["query"].ToString();
+                var books = await _booksService.SearchBooksAsync(query);
 
-                // If the query is null or empty, return all books
-                if (string.IsNullOrWhiteSpace(query))
+                if (books.Count == 0)
                 {
-                    var allBooks = await _booksService.GetBooksAsync();
-                    if (allBooks == null || allBooks.Count == 0)
-                    {
-                        return NotFound(new { message = "No books available in the database." });
-                    }
-                    return Ok(allBooks);
+                    return NotFound(new { message = "No records found" });
                 }
 
-                if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
-                {
-                    return BadRequest(new { message = ErrorMessages.InvalidKeywordFormat });
-                }
-
-                // Split the query into individual words and convert to lowercase
-                var words = query.Split(new char[] { ' ', '\u200E' }, StringSplitOptions.RemoveEmptyEntries)
-                                 .Select(word => word.ToLower());
-
-                // Build the query to filter the books in the database
-                var filteredBooksQuery = _db.Books.AsQueryable();
-
-                foreach (var word in words)
-                {
-                    // Filter the books based on the title, author, and ISBN using the LIKE operator
-                    filteredBooksQuery = filteredBooksQuery.Where(b =>
-                        EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
-                        EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
-                        EF.Functions.Like(b.isbn.ToString(), $"%{word}%"));
-                }
-
-                var filteredBooks = await filteredBooksQuery.ToListAsync();
-
-                if (filteredBooks.Count == 0)
-                {
-                    return NotFound(new { message = "No Records found" });
-                }
-
-                return Ok(filteredBooks);
+                return Ok(books);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -192,6 +163,31 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = "Internal server error. Please try again later." });
             }
         }
+
+
+        // GET: api/books/advancedsearch
+        [HttpGet("advancedsearch")]
+        [DisableRequestSizeLimit]
+        public async Task<ActionResult<IEnumerable<Books>>> AdvancedSearch([FromQuery] string? title, [FromQuery] string? author, [FromQuery] string? isbn)
+        {
+            try
+            {
+                var books = await _booksService.AdvancedSearchAsync(title, author, isbn);
+
+                if (books.Count == 0)
+                {
+                    return NotFound(new { message = "No records found." });
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while performing an advanced search for books.");
+                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+            }
+        }
+
 
 
         // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
