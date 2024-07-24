@@ -32,8 +32,6 @@ public class BooksService
             Fname = part.Length > 0 ? part[0] : "",
             Lname = part.Length > 1 ? part[1] : "",
             Price = book.Price,
-            DiscountPrice = book.Price - (book.Price * book.Discount / 100),
-            discount = book.Discount,
         };
 
         return booksDto;
@@ -62,16 +60,6 @@ public class BooksService
         if (book.Price <= 0)
         {
             validationMessage = "Price must be greater than zero.";
-            return false;
-        }
-        if (book.Discount <= 0)
-        {
-            validationMessage = "Discount should be greater than 0.";
-            return false;
-        }
-        if (book.Discount > book.Price)
-        {
-            validationMessage = "Price must be greater than Discount.";
             return false;
         }
         if (book.isbn.ToString().Length <= 10)

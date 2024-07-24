@@ -100,16 +100,6 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(new { message = "Price should be greater than 0" });
             }
 
-            if (!(book.Discount > 0))
-            {
-                return BadRequest(new { message = "Discount should be greater than 0" });
-            }
-
-            if (book.Discount > book.Price)
-            {
-                return BadRequest(new { message = "Price must be greater than Discount." });
-            }
-
             if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
             {
                 return BadRequest(new { message = "The length of ISBN should be greater than 10 and less than 13" });
