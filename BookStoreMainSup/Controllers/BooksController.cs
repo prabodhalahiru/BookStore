@@ -20,45 +20,60 @@ namespace BookStoreMainSup.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
-        private readonly ApplicationDbContext _context;
+        private readonly BooksService _booksService;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger, ApplicationDbContext context)
+        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
         {
             _db = db;
             _logger = logger;
-            _context = context;
+            _booksService = new BooksService(db);
         }
 
         //Get: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
         {
-            var books = await _context.Books.ToListAsync();
-
-            if (books == null || books.Count == 0)
+            try
             {
-                return NotFound("No books available in the database.");
-            }
+                var books = await _booksService.GetBooksAsync();
 
-            return await _db.Books.ToListAsync();
+                if (books == null || books.Count == 0)
+                {
+                    _logger.LogWarning("No books available in the database.");
+                    return NotFound(new { message = "No books available in the database." });
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while getting the books.");
+                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+            }
         }
 
         //Get: api/Books/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<BooksDto>> GetBook(int id)
         {
-            var book = await _db.Books.FindAsync(id);
-
-            if (book == null)
+            try
             {
-                return NotFound();
+                var book = await _booksService.GetBookByIdAsync(id);
+
+                if (book == null)
+                {
+                    _logger.LogWarning($"Book with ID {id} not found.");
+                    return NotFound(new { message = $"Book with ID {id} not found." });
+                }
+
+                var bookDto = _booksService.MapBookToDto(book);
+                return Ok(bookDto);
             }
-
-            await _db.SaveChangesAsync();
-
-            var booksDto = MapBooksdto(book);
-
-            return booksDto;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while getting the book.");
+                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+            }
         }
 
         //PUT: API/Books/{id}
@@ -136,6 +151,11 @@ namespace BookStoreMainSup.Controllers
                 }
             }
             return Ok(book);
+        }
+
+        private bool BookExists(int id)
+        {
+            return _db.Books.Any(e => e.Id == id);
         }
 
         // GET: api/Books/search?query=keyword
@@ -237,89 +257,33 @@ namespace BookStoreMainSup.Controllers
         [HttpPost]
         public async Task<ActionResult<Books>> PostBook(Books book)
         {
-            // Check if the model state is valid
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            if (string.IsNullOrEmpty(book.Title) || string.IsNullOrEmpty(book.Author))
+
+            if (!_booksService.ValidateBook(book, out string validationMessage))
             {
-                return BadRequest("Title or Author fields are required.");
-            }
-            if (book.Price <= 0)
-            {
-                return BadRequest("Price must be greater than zero.");
-            }
-            if (!(book.Discount > 0))
-            {
-                return BadRequest("Discount should be greater than 0");
-            }
-            if (book.Discount > book.Price)
-            {
-                return BadRequest("Price must be greater than Discount.");
-            }
-            if (book.isbn.ToString().Length <= 10)
-            {
-                return BadRequest("The length of ISBN should greater than 10");
+                return BadRequest(new { message = validationMessage });
             }
 
-            if (book.isbn.ToString().Length >= 13)
+            if (await _booksService.BookExistsAsync(book.isbn.ToString()))
             {
-                return BadRequest("The length of ISBN should less than 13");
-            }
-
-            if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
-            {
-                return BadRequest("ISBN should be a number");
-            }
-
-            var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
-            if (existingBook != null)
-            {
-                return BadRequest("A book with this ISBN already exists.");
+                return BadRequest(new { message = "A book with this ISBN already exists." });
             }
 
             try
             {
-                _db.Books.Add(book);
-                await _db.SaveChangesAsync();
-
-                // Return 201 Created with the book object
+                await _booksService.AddBookAsync(book);
                 return StatusCode(201, book);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, "An error occurred while saving your book.");
+                _logger.LogError(ex, "An error occurred while saving the book.");
+                return StatusCode(500, new { message = "An error occurred while saving your book." });
             }
-        }
+        } 
 
-        private bool isValidISBN(string isbn)
-        {
-            return !string.IsNullOrEmpty(isbn);
-        }
-
-        private bool BookExists(int id)
-        {
-            return _db.Books.Any(e => e.Id == id);
-        }
-
-        // Map the Books object to BooksDto object
-        private BooksDto MapBooksdto(Books book)
-        {
-            var part = book.Author.Split(" ");
-
-            var booksDto = new BooksDto
-            {
-                Title = book.Title,
-                Fname = part.Length > 0 ? part[0] : "",
-                Lname = part.Length > 1 ? part[1] : "",
-                Price = book.Price,
-                DiscountPrice = book.Price - (book.Price * book.Discount / 100),
-                discount = book.Discount,
-            };
-
-            return booksDto;
-        }
         //Delete Function
         [Authorize]
         [HttpDelete("{isbn}")]
