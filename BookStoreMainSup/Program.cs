@@ -16,6 +16,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 // Register the TokenRevocationService
 builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>();
 
+// Register the AuthService
+builder.Services.AddScoped<AuthService>();
+
 // Configure JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
 builder.Services.AddAuthentication(options =>
