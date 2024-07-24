@@ -281,19 +281,19 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                var result = await _db.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
+                var isDeleted = await _booksService.DeleteBookByIsbnAsync(isbn);
 
-                if (result == 0)
+                if (!isDeleted)
                 {
                     return BadRequest(new { message = "Please enter the correct ISBN" });
                 }
 
-                return Ok(new { message = "Book deleted successfully", isbn = isbn });
+                return Ok(new { message = "Book deleted successfully", isbn });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while deleting the book.");
-                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
+                return StatusCode(500, new { message = "Something went wrong!" });
             }
         }
     }
