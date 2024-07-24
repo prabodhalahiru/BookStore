@@ -47,7 +47,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while getting the books.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -71,7 +71,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while getting the book.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -132,7 +132,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while updating the book.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -160,7 +160,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while searching for books.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -184,7 +184,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while performing an advanced search for books.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -238,7 +238,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while sorting books by price range.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
 
@@ -293,7 +293,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while deleting the book.");
-                return StatusCode(500, new { message = "Internal server error. Please try again later." });
+                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
         }
     }
