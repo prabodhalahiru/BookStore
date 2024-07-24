@@ -3,6 +3,12 @@ using BookStoreMainSup.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
+public class BookUpdateResult
+{
+    public bool IsSuccess { get; set; }
+    public Books Book { get; set; }
+    public string ErrorMessage { get; set; }
+}
 public class BooksService
 {
     private readonly ApplicationDbContext _context;
@@ -132,6 +138,55 @@ public class BooksService
         }
 
         return await query.ToListAsync();
+    }
+
+    public async Task<BookUpdateResult> UpdateBookAsync(int id, Books book)
+    {
+        // Setting the ID from the URL to book object
+        book.Id = id;
+
+        if (id != book.Id)
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "The ID in the URL does not match the ID in the body." };
+        }
+
+        if (string.IsNullOrEmpty(book.isbn.ToString()))
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "You should enter ISBN Number" };
+        }
+
+        if (!(book.Price > 0))
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Price should be greater than 0" };
+        }
+
+        if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "The length of ISBN should be greater than 10 and less than 13" };
+        }
+
+        // Retrieve existing book data
+        var existingBook = await _context.Books.FindAsync(id);
+        if (existingBook == null)
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Book not found." };
+        }
+
+        // Checking whether same ISBN number is updating
+        var availableISBN = await _context.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
+        if (availableISBN)
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. ISBN should be unique" };
+        }
+
+        // Detach the existing entity to avoid tracking issues
+        _context.Entry(existingBook).State = EntityState.Detached;
+
+        _context.Entry(book).State = EntityState.Modified;
+
+        await _context.SaveChangesAsync();
+
+        return new BookUpdateResult { IsSuccess = true, Book = book };
     }
 
     public async Task<bool> DeleteBookByIsbnAsync(string isbn)
