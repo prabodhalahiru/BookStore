@@ -17,24 +17,23 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+       // private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
-        private readonly BooksService _booksService;
+        private readonly IBookService _booksService;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
+        public BooksController(ILogger<BooksController> logger,IBookService bookService)
         {
-            _db = db;
             _logger = logger;
-            _booksService = new BooksService(db);
+            _booksService = bookService;
         }
 
         // Get: api/Books
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
+        public async Task<ActionResult<IEnumerable<Books>>> GetBooks(CancellationToken cancellationToken)
         {
             try
             {
-                var books = await _booksService.GetBooksAsync();
+                var books = await _booksService.GetBooksAsync(cancellationToken);
 
                 if (books == null || books.Count == 0)
                 {
@@ -157,7 +156,7 @@ namespace BookStoreMainSup.Controllers
 
 
         // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
-        [HttpGet("sortbyrange")]
+        /*[HttpGet("sortbyrange")]
         public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
         {
             try
@@ -206,22 +205,22 @@ namespace BookStoreMainSup.Controllers
                 _logger.LogError(ex, "An error occurred while sorting books by price range.");
                 return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
             }
-        }
+        }*/
 
         // POST: api/Books
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Books>> PostBook(Books book)
+        public async Task<ActionResult<Books>> PostBook(Books book, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (!_booksService.ValidateBook(book, out string validationMessage))
+            /*if (!_booksService.ValidateBook(book, out string validationMessage))
             {
                 return BadRequest(new { message = validationMessage });
-            }
+            }*/
 
             if (await _booksService.BookExistsAsync(book.isbn.ToString()))
             {

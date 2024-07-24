@@ -18,6 +18,7 @@ builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>()
 
 // Register the AuthService
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<IBookService, BooksService>();
 
 // Configure JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);

@@ -2,14 +2,37 @@
 using BookStoreMainSup.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using System.Threading;
 
+public interface IBookService
+{
+    Task<List<Books>> GetBooksAsync(CancellationToken cancellationToken);
+    Task<Books> GetBookByIdAsync(int id);
+
+    Task AddBookAsync(Books book);
+
+    BooksDto MapBookToDto(Books book);
+
+    Task<bool> BookExistsAsync(string isbn);
+
+    Task<List<Books>> SearchBooksAsync(string query);
+
+    Task<List<Books>> AdvancedSearchAsync(string? title, string? author, string? isbn);
+
+    Task<BookUpdateResult> UpdateBookAsync(int id, Books book);
+
+    Task<bool> DeleteBookByIsbnAsync(string isbn);
+
+
+
+}
 public class BookUpdateResult
 {
     public bool IsSuccess { get; set; }
     public Books Book { get; set; }
     public string ErrorMessage { get; set; }
 }
-public class BooksService
+public class BooksService: IBookService
 {
     private readonly ApplicationDbContext _context;
 
@@ -18,9 +41,9 @@ public class BooksService
         _context = db;
     }
 
-    public async Task<List<Books>> GetBooksAsync()
+    public async Task<List<Books>> GetBooksAsync(CancellationToken cancellationToken)
     {
-        return await _context.Books.ToListAsync();
+        return await _context.Books.ToListAsync(cancellationToken);
     }
 
     public async Task<Books> GetBookByIdAsync(int id)
@@ -91,7 +114,7 @@ public class BooksService
     {
         if (string.IsNullOrWhiteSpace(query))
         {
-            return await GetBooksAsync();
+            return await GetBooksAsync(CancellationToken.None);
         }
 
         if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
