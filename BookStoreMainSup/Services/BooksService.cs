@@ -133,4 +133,10 @@ public class BooksService
 
         return await query.ToListAsync();
     }
+
+    public async Task<bool> DeleteBookByIsbnAsync(string isbn)
+    {
+        var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
+        return result > 0;
+    }
 }
