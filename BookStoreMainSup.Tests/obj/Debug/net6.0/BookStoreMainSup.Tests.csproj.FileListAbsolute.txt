@@ -146,3 +146,4 @@ C:\Users\prabo\OneDrive\Documents\BookStore\BookStoreMainSup.Tests\obj\Debug\net
 C:\Users\prabo\OneDrive\Documents\BookStore\BookStoreMainSup.Tests\obj\Debug\net6.0\BookStoreMainSup.Tests.pdb
 C:\Users\prabo\OneDrive\Documents\BookStore\BookStoreMainSup.Tests\obj\Debug\net6.0\BookStoreMainSup.Tests.genruntimeconfig.cache
 C:\Users\prabo\OneDrive\Documents\BookStore\BookStoreMainSup.Tests\obj\Debug\net6.0\ref\BookStoreMainSup.Tests.dll
+C:\Users\prabo\OneDrive\Documents\BookStore\BookStoreMainSup.Tests\bin\Debug\net6.0\Microsoft.EntityFrameworkCore.InMemory.dll

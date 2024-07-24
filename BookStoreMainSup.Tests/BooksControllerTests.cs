@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using Xunit;
+﻿using Xunit;
 using Moq;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Mvc;
@@ -7,64 +6,71 @@ using Microsoft.EntityFrameworkCore;
 using BookStoreMainSup.Controllers;
 using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace BookStoreMainSup.Tests
 {
     public class BooksControllerTests
     {
-        // Mock for ApplicationDbContext
-        private readonly Mock<ApplicationDbContext> _mockDbContext;
-
-        // Mock for ILogger
-        private readonly Mock<ILogger<BooksController>> _mockLogger;
-
-        // Instance of BooksController
+        private readonly ApplicationDbContext _context;
+        private readonly ILogger<BooksController> _logger;
         private readonly BooksController _controller;
+
 
         public BooksControllerTests()
         {
+            // Set up the in-memory database options
+            var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+                .UseInMemoryDatabase(databaseName: "BookStoreTest")
+                .Options;
 
-            //Initialize the mocks
-            _mockDbContext = new Mock<ApplicationDbContext>(new DbContextOptions<ApplicationDbContext>());
-            _mockLogger = new Mock<ILogger<BooksController>>();
-            _controller = new BooksController(_mockDbContext.Object, _mockLogger.Object, _mockDbContext.Object);
+            // Initialize the context with the in-memory options
+            _context = new ApplicationDbContext(options);
 
+            // Use a real logger or mock if needed
+            _logger = new Mock<ILogger<BooksController>>().Object;
+            _controller = new BooksController(_context, _logger, _context);
+
+            // Seed the database with initial data if necessary
+            SeedDatabase();
+        }
+
+        private void SeedDatabase()
+        {
+            var books = new List<Books>
+        {
+            new Books { Id = 1, Title = "Test Book", Author = "Test Author", Price = 20, Discount = 5, isbn = 1234567890 }
+            // Add more books if needed
+        };
+
+            _context.Books.AddRange(books);
+            _context.SaveChanges();
         }
 
         //Indicates a test method
         [Fact]
         public async Task PutBook_ReturnsOkResult()
         {
-            //Arrange
+            // Arrange
             var bookId = 1;
-            var book = new Books
+            var updatedBook = new Books
             {
                 Id = bookId,
-                Title = "Test Book",
-                Author = "Test Author",
-                Price = 20,
+                Title = "Updated Test Book",
+                Author = "Updated Test Author",
+                Price = 25,
                 Discount = 5,
                 isbn = 1234567890
             };
 
-            // Set up the mock behavior for FindAsync, AnyAsync, and SaveChangesAsync methods
-            _mockDbContext.Setup(db => db.Books.FindAsync(bookId)).ReturnsAsync(book);
-            // _mockDbContext.Setup(db => db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != bookId)).ReturnsAsync(false);
-            _mockDbContext.Setup(db => db.SaveChangesAsync(default)).ReturnsAsync(1);
+            // Act
+            var result = await _controller.PutBook(bookId, updatedBook);
 
-            //Act
-            var result = await _controller.PutBook(bookId, book);
-
-            //Assert
-
-            //check if the result is of type OkObjectResult
+            // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
-
-            //check if the value of the result is of type books
             var returnValue = Assert.IsType<Books>(okResult.Value);
-
-            //verify if the returned book is the same as the input
-            Assert.Equal(book, returnValue);
+            Assert.Equal(updatedBook.Title, returnValue.Title);
         }
             
 
