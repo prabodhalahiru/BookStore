@@ -55,29 +55,25 @@ builder.Services.AddAuthentication(options =>
         OnChallenge = context =>
         {
             context.HandleResponse();
-            string errorMessage = "User unauthorized";
+            var response = context.Response;
+            response.StatusCode = 401;
+            response.ContentType = "application/json";
+
+            var errorMessage = new { message = "User unauthorized" };
             if (context.AuthenticateFailure != null)
             {
                 if (context.AuthenticateFailure.GetType() == typeof(SecurityTokenExpiredException))
                 {
-                    context.Response.StatusCode = 401;
-                    context.Response.ContentType = "text/plain";
-                    errorMessage = "Token is expired";
+                    errorMessage = new { message = "Token is expired" };
                 }
-                else if (context.AuthenticateFailure.Message == "This token has been revoked.")
+                else if (context.AuthenticateFailure.Message == "Token has been revoked")
                 {
-                    context.Response.StatusCode = 401;
-                    context.Response.ContentType = "text/plain";
-                    errorMessage = "Token has been revoked";
-                }
-                else
-                {
-                    context.Response.StatusCode = 401;
-                    context.Response.ContentType = "text/plain";
+                    errorMessage = new { message = "Token has been revoked" };
                 }
             }
 
-            return context.Response.WriteAsync(errorMessage);
+            var result = System.Text.Json.JsonSerializer.Serialize(errorMessage);
+            return response.WriteAsync(result);
         }
     };
 });
