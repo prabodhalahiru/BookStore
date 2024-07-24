@@ -181,10 +181,6 @@
               "target": "Package",
               "version": "[6.10.0, )"
             },
-            "Moq": {
-              "target": "Package",
-              "version": "[4.20.70, )"
-            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.5.0, )"
@@ -192,16 +188,6 @@
             "System.IdentityModel.Tokens.Jwt": {
               "target": "Package",
               "version": "[6.10.0, )"
-            },
-            "xUnit": {
-              "target": "Package",
-              "version": "[2.9.0, )"
-            },
-            "xunit.runner.visualstudio": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[2.8.2, )"
             }
           },
           "imports": [
