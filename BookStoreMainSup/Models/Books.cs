@@ -8,7 +8,6 @@
         public double Price { get; set; }
         public long isbn { get; set; }
         public double Discount { get; set; }
-        public int PurchaseCount { get; set; }
 
     }
 }

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using BookStoreMainSup.Resources;
 using System.Text.RegularExpressions;
 using System;
-using static System.Reflection.Metadata.BlobBuilder;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -20,26 +19,17 @@ namespace BookStoreMainSup.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
-        private readonly ApplicationDbContext _context;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger, ApplicationDbContext context)
+        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
         {
             _db = db;
             _logger = logger;
-            _context = context;
         }
 
         //Get: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
         {
-            var books = await _context.Books.ToListAsync();
-
-            if (books == null || books.Count == 0)
-            {
-                return NotFound("No books available in the database.");
-            }
-
             return await _db.Books.ToListAsync();
         }
 
@@ -54,9 +44,11 @@ namespace BookStoreMainSup.Controllers
                 return NotFound();
             }
 
-            await _db.SaveChangesAsync();
+         //   UpdateBookSellCount(book);
+         //   await _db.SaveChangesAsync();
 
-            var booksDto = MapBooksdto(book);
+            double DiscountedPrice = CalculateDiscount(book);
+            var booksDto = MapBooksdto(book, DiscountedPrice);
 
             return booksDto;
         }
@@ -76,19 +68,24 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest("The ID in the URL does not match the ID in the body.");
             }
 
-            if (string.IsNullOrEmpty(book.isbn.ToString()))
+            if(book.isbn <= 0)
             {
-                return BadRequest("You should enter ISBN Number");
+                return BadRequest("ISBN Should be a positive number");
             }
+
+            //if (string.IsNullOrEmpty(book.isbn))
+            //{
+            //    return BadRequest("You should enter ISBN Number");
+            //}
+
+            //if (!(isbnAlphanumericCheck(book.isbn)))
+            //{
+            //    return BadRequest("ISBN Should be only contains letters and numbers");
+            //}
             
             if(!(book.Price > 0))
             {
                 return BadRequest("Price should be greater than 0");
-            }
-
-            if (!(book.Discount > 0))
-            {
-                return BadRequest("Discount should be greater than 0");
             }
 
             if (book.Discount > book.Price)
@@ -98,7 +95,7 @@ namespace BookStoreMainSup.Controllers
 
             if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
             {
-                return BadRequest("The length of ISBN should greater than 10 and less than 13");
+                return BadRequest("The length should be greater than 10 digits and less than 13 digits");
             }
 
             //Retrieve excisting book data
@@ -107,6 +104,12 @@ namespace BookStoreMainSup.Controllers
             {
                 return NotFound();
             }
+
+            //Checking whether sellcount has modified
+            //if(existingBook.SellCount != book.SellCount)
+            //{
+            //    return BadRequest("You cannot update the sellcount");
+            //}
 
             //Checking whether same isbn number is updating
             var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
@@ -167,7 +170,8 @@ namespace BookStoreMainSup.Controllers
                 // Filter the books based on the title, author, and ISBN using the LIKE operator
                 filteredBooksQuery = filteredBooksQuery.Where(b =>
                     EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
-                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%"));
+                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
+                    EF.Functions.Like(b.isbn.ToString().ToLower(), $"%{word}%"));
             }
 
             var filteredBooks = await filteredBooksQuery.ToListAsync();
@@ -250,34 +254,22 @@ namespace BookStoreMainSup.Controllers
             {
                 return BadRequest("Price must be greater than zero.");
             }
-            if (!(book.Discount > 0))
-            {
-                return BadRequest("Discount should be greater than 0");
-            }
             if (book.Discount > book.Price)
             {
                 return BadRequest("Price must be greater than Discount.");
             }
-            if (book.isbn.ToString().Length <= 10)
+            if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
             {
-                return BadRequest("The length of ISBN should greater than 10");
+                return BadRequest("The length should be greater than 10 digits and less than 13 digits");
             }
 
-            if (book.isbn.ToString().Length >= 13)
-            {
-                return BadRequest("The length of ISBN should less than 13");
-            }
 
-            if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
-            {
-                return BadRequest("ISBN should be a number");
-            }
 
-            var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
-            if (existingBook != null)
-            {
-                return BadRequest("A book with this ISBN already exists.");
-            }
+            //var existingBook = await _db.Books.FirstOrDefaultAsync(b => b.isbn == book.isbn);
+            //if (existingBook != null)
+            //{
+            //    return BadRequest("A book with this ISBN already exists.");
+            //}
 
             try
             {
@@ -298,13 +290,32 @@ namespace BookStoreMainSup.Controllers
             return !string.IsNullOrEmpty(isbn);
         }
 
+        private bool isbnAlphanumericCheck(string isbn)
+        {
+            return Regex.IsMatch(isbn, @"^[a-zA-Z0-9]+$");
+        }
+
+        //private void UpdateBookSellCount(Books book)
+        //{
+        //    book.SellCount = book.SellCount;
+        //    _db.Entry(book).State = EntityState.Modified;
+        //}
+
         private bool BookExists(int id)
         {
             return _db.Books.Any(e => e.Id == id);
         }
 
+        // Calculate the discount based on the number of books sold
+        private double CalculateDiscount(Books book)
+        {
+            double DiscountedPrice = (book.Price - (book.Price * book.Discount / 100));
+
+            return DiscountedPrice;
+        }
+
         // Map the Books object to BooksDto object
-        private BooksDto MapBooksdto(Books book)
+        private BooksDto MapBooksdto(Books book, double newPercentage)
         {
             var part = book.Author.Split(" ");
 
@@ -314,8 +325,9 @@ namespace BookStoreMainSup.Controllers
                 Fname = part.Length > 0 ? part[0] : "",
                 Lname = part.Length > 1 ? part[1] : "",
                 Price = book.Price,
-                DiscountPrice = book.Price - (book.Price * book.Discount / 100),
-                discount = book.Discount,
+                DiscountPrice = book.Price - (book.Price * newPercentage / 100),
+                //discount = newPercentage,
+              //  SellCount = book.SellCount
             };
 
             return booksDto;

@@ -27,7 +27,7 @@ public class AdminService
             throw new Exception("Book not found");
         }
 
-        book.PurchaseCount++;
+       // book.PurchaseCount++;
         _context.Books.Update(book);
         _context.SaveChanges();
 
