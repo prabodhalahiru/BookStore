@@ -1,5 +1,6 @@
 ﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -140,6 +141,51 @@ public class BooksService
         return await query.ToListAsync();
     }
 
+    public async Task<List<Books>> GetBooksInRange (double? minPrice, double? maxPrice)
+    {
+        if (!minPrice.HasValue || !maxPrice.HasValue || minPrice < 0 || maxPrice < 0)
+        {
+            throw new ArgumentException("Price should have a positive value");
+        }
+
+        if (minPrice > maxPrice)
+        {
+            throw new ArgumentException("maxPrice should be greater than minPrice");
+        }
+
+        var allBooks = await _context.Books.ToListAsync();
+
+        var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+
+        return booksInRange;
+
+    }
+
+    public async Task<List<Books>> SortBooksByOrder(string? order, List<Books> booksInRange)
+    {
+        if (string.IsNullOrEmpty(order))
+        {
+            order = "asc";
+        }
+
+        List<Books> sortedBooks;
+        if (order.ToLower() == "desc")
+        {
+            sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
+        }
+        else if (order.ToLower() == "asc")
+        {
+            sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+        }
+        else
+        {
+            throw new ArgumentException("Invalid order method");
+        }
+                     
+        return sortedBooks;
+
+    }
+
     public async Task<BookUpdateResult> UpdateBookAsync(int id, Books book)
     {
         // Setting the ID from the URL to book object
@@ -155,7 +201,7 @@ public class BooksService
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "You should enter ISBN Number" };
         }
 
-        if (!(book.Price > 0))
+        if (!IsPositive(book.Price))
         {
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Price should be greater than 0" };
         }
@@ -176,7 +222,7 @@ public class BooksService
         var availableISBN = await _context.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
         if (availableISBN)
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. ISBN should be unique" };
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. Please update a unique ISBN" };
         }
 
         // Detach the existing entity to avoid tracking issues
@@ -194,4 +240,7 @@ public class BooksService
         var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
         return result > 0;
     }
+
+    private bool IsPositive(double value) => value > 0;
+    private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
 }

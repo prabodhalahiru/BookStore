@@ -97,7 +97,7 @@ namespace BookStoreMainSup.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while updating the book.");
-                return StatusCode(500, new { message = "Oops! Looks like we tripped over a cable. We'll get back up and running in no time." });
+                return StatusCode(500, new { message = "Oops! Something went Wrong!" });
             }
         }
 
@@ -162,44 +162,22 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                if (!minPrice.HasValue || !maxPrice.HasValue)
-                {
-                    return BadRequest(new { message = "minPrice or maxPrice cannot be Null" });
-                }
-                if (minPrice < 0 || maxPrice < 0)
-                {
-                    return BadRequest(new { message = "Price should have a positive value" });
-                }
-                else if (minPrice > maxPrice)
-                {
-                    return BadRequest(new { message = "maxPrice should be greater than minPrice" });
-                }
-                if (string.IsNullOrEmpty(order))
-                {
-                    order = "asc";
-                }
-
-                var allBooks = await _db.Books.ToListAsync();
-
                 // Filter books by price range
-                var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+                var booksInRangeResult = await _booksService.GetBooksInRange(minPrice, maxPrice);
+                
+                if (booksInRangeResult.Count == 0)
+                {
+                    return NotFound(new { message = "No Books available in Range" });
+                }
 
                 // Sort books by order
-                List<Books> sortedBooks;
-                if (order.ToLower() == "desc")
-                {
-                    sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
-                }
-                else if (order.ToLower() == "asc")
-                {
-                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
-                }
-                else
-                {
-                    return BadRequest(new { message = "Invalid order method" });
-                }
-
+                var sortedBooks = await _booksService.SortBooksByOrder(order, booksInRangeResult);
+                
                 return Ok(sortedBooks);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
