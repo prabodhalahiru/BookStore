@@ -1,5 +1,6 @@
 ﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -138,6 +139,51 @@ public class BooksService
         }
 
         return await query.ToListAsync();
+    }
+
+    public async Task<List<Books>> GetBooksInRange (double? minPrice, double? maxPrice)
+    {
+        if (!minPrice.HasValue || !maxPrice.HasValue || minPrice < 0 || maxPrice < 0)
+        {
+            throw new ArgumentException("Price should have a positive value");
+        }
+
+        if (minPrice > maxPrice)
+        {
+            throw new ArgumentException("maxPrice should be greater than minPrice");
+        }
+
+        var allBooks = await _context.Books.ToListAsync();
+
+        var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+
+        return booksInRange;
+
+    }
+
+    public async Task<List<Books>> SortBooksByOrder(string? order, List<Books> booksInRange)
+    {
+        if (string.IsNullOrEmpty(order))
+        {
+            order = "asc";
+        }
+
+        List<Books> sortedBooks;
+        if (order.ToLower() == "desc")
+        {
+            sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
+        }
+        else if (order.ToLower() == "asc")
+        {
+            sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+        }
+        else
+        {
+            throw new ArgumentException("Invalid order method");
+        }
+                     
+        return sortedBooks;
+
     }
 
     public async Task<BookUpdateResult> UpdateBookAsync(int id, Books book)
