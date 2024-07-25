@@ -10,6 +10,10 @@ using System.Text;
 using System;
 using System.Threading.Tasks;
 using BookStoreMainSup.Resources;
+using System.Net.Mail;
+using MimeKit;
+using MailKit.Net.Smtp;
+using MailKit.Security;
 
 public class AuthService
 {
@@ -74,7 +78,7 @@ public class AuthService
             return false;
         }
 
-        if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+        if (!IsValidEmail(request.Email))
         {
             validationMessage = ErrorMessages.InvalidEmailFormat;
             return false;
@@ -110,7 +114,7 @@ public class AuthService
             return false;
         }
 
-        if (!Regex.IsMatch(request.Password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/`]"))
+        if (!Regex.IsMatch(request.Password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/]"))
         {
             validationMessage = ErrorMessages.PasswordScpecialCha;
             return false;
@@ -118,4 +122,48 @@ public class AuthService
 
         return true;
     }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new MailAddress(email);
+
+            if (addr.Address != email)
+            {
+                return false;
+            }
+
+            // Custom invalid email scenarios
+            if (email.Contains("..") || email.Contains(",") || email.Contains("#") || email.Contains("*") || email.Contains("~") || email.Contains("$") || email.Contains("\""))
+            {
+                return false;
+            }
+
+            string domainPart = email.Split('@')[1];
+            if (domainPart.StartsWith("-") || domainPart.EndsWith("-") || domainPart.StartsWith(".") || domainPart.EndsWith(".") || domainPart.Contains(" "))
+            {
+                return false;
+            }
+
+            if (domainPart.Split('.').Last().Length < 2)
+            {
+                return false;
+            }
+
+            // Using MimeKit for additional validation
+            var emailAddress = new MimeKit.MailboxAddress(string.Empty, email);
+            if (emailAddress.Address != email)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 }
