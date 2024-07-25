@@ -59,16 +59,16 @@ builder.Services.AddAuthentication(options =>
             response.StatusCode = 401;
             response.ContentType = "application/json";
 
-            var errorMessage = new { message = "User unauthorized" };
+            var errorMessage = new { error = "User unauthorized" };
             if (context.AuthenticateFailure != null)
             {
                 if (context.AuthenticateFailure.GetType() == typeof(SecurityTokenExpiredException))
                 {
-                    errorMessage = new { message = "Token is expired" };
+                    errorMessage = new { error = "Token is expired" };
                 }
-                else if (context.AuthenticateFailure.Message == "Token has been revoked")
+                else if (context.AuthenticateFailure.Message == "This token has been revoked.")
                 {
-                    errorMessage = new { message = "Token has been revoked" };
+                    errorMessage = new { error = "Token has been revoked" };
                 }
             }
 
