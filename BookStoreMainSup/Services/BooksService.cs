@@ -38,6 +38,7 @@ public class BooksService
             Title = book.Title,
             Fname = part.Length > 0 ? part[0] : "",
             Lname = part.Length > 1 ? part[1] : "",
+            isbn = book.isbn,
             Price = book.Price,
         };
 

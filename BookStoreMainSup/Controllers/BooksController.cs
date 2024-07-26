@@ -225,6 +225,11 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
+                if (!long.TryParse(isbn, out long validIsbn))
+                {
+                    return BadRequest(new { message = "Please enter the correct ISBN" });
+                }
+
                 var isDeleted = await _booksService.DeleteBookByIsbnAsync(isbn);
 
                 if (!isDeleted)
