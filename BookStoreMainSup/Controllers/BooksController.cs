@@ -221,18 +221,24 @@ namespace BookStoreMainSup.Controllers
         // DELETE: api/Books/{isbn}
         [Authorize]
         [HttpDelete("{isbn}")]
-        public async Task<IActionResult> DeleteBook(string isbn)
+        public async Task<IActionResult> DeleteBook(long identifier)
         {
             try
             {
-                var isDeleted = await _booksService.DeleteBookByIsbnAsync(isbn);
+                // Validate if the identifier is an ISBN
+                if (!_booksService.IsValidIsbn(identifier))
+                {
+                    return BadRequest(new { message = "Please enter a valid ISBN" });
+                }
+
+                var isDeleted = await _booksService.DeleteBookByIsbnAsync(identifier);
 
                 if (!isDeleted)
                 {
-                    return BadRequest(new { message = "Please enter the correct ISBN" });
+                    return BadRequest(new { message = "Book not found with the provided ISBN" });
                 }
 
-                return Ok(new { message = "Book deleted successfully", isbn });
+                return Ok(new { message = "Book deleted successfully", isbn = identifier });
             }
             catch (Exception ex)
             {
@@ -240,5 +246,6 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = "Something went wrong!" });
             }
         }
+
     }
 }
