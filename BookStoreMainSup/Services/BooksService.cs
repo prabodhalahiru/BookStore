@@ -40,7 +40,6 @@ public class BooksService
             Lname = part.Length > 1 ? part[1] : "",
             isbn = book.isbn,
             Price = book.Price,
-            isbn = book.isbn
         };
 
         return booksDto;
