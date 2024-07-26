@@ -39,6 +39,7 @@ public class BooksService
             Fname = part.Length > 0 ? part[0] : "",
             Lname = part.Length > 1 ? part[1] : "",
             Price = book.Price,
+            isbn = book.isbn
         };
 
         return booksDto;
@@ -235,7 +236,18 @@ public class BooksService
         return new BookUpdateResult { IsSuccess = true, Book = book };
     }
 
-    public async Task<bool> DeleteBookByIsbnAsync(string isbn)
+    public bool IsValidIsbn(long isbn)
+    {
+        // Add your ISBN validation logic here
+        // For example, check if it is 10 or 13 characters long and consists only of digits
+        if (isbn.ToString().Length == 10 || isbn.ToString().Length == 13)
+        {
+            return isbn.ToString().All(char.IsDigit);
+        }
+        return false;
+    }
+
+    public async Task<bool> DeleteBookByIsbnAsync(long isbn)
     {
         var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
         return result > 0;
