@@ -81,9 +81,14 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
+                if (string.IsNullOrEmpty(request.Password))
                 {
-                    return BadRequest(new { message = ErrorMessages.RequiredFields });
+                    return BadRequest(new { message = ErrorMessages.RequiredFieldsPassword });
+                }
+
+                if (string.IsNullOrEmpty(request.Identifier))
+                {
+                    return BadRequest(new { message = ErrorMessages.RequiredFieldsIdentifier });
                 }
 
                 var user = await _authService.GetUserByIdentifierAsync(request.Identifier);

@@ -3,6 +3,8 @@
     public static class ErrorMessages
     {
         public const string RequiredFields = "All fields are required.";
+        public const string RequiredFieldsIdentifier = "Username/ Email is required.";
+        public const string RequiredFieldsPassword = "Password is required.";
         public const string InvalidEmailFormat = "Invalid email format.";
         public const string InvalidUsernameFormat = "Username must be between 3 and 20 characters and contain only letters and numbers.";
         public const string InvalidPasswordFormat = "Password must be at least 5 characters and contain at least one uppercase, lowercase letter, one digit, and one special character.";

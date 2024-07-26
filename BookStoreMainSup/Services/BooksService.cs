@@ -1,5 +1,6 @@
 ﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
@@ -37,6 +38,7 @@ public class BooksService
             Title = book.Title,
             Fname = part.Length > 0 ? part[0] : "",
             Lname = part.Length > 1 ? part[1] : "",
+            isbn = book.isbn,
             Price = book.Price,
         };
 
@@ -140,6 +142,51 @@ public class BooksService
         return await query.ToListAsync();
     }
 
+    public async Task<List<Books>> GetBooksInRange (double? minPrice, double? maxPrice)
+    {
+        if (!minPrice.HasValue || !maxPrice.HasValue || minPrice < 0 || maxPrice < 0)
+        {
+            throw new ArgumentException("Price should have a positive value");
+        }
+
+        if (minPrice > maxPrice)
+        {
+            throw new ArgumentException("maxPrice should be greater than minPrice");
+        }
+
+        var allBooks = await _context.Books.ToListAsync();
+
+        var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+
+        return booksInRange;
+
+    }
+
+    public async Task<List<Books>> SortBooksByOrder(string? order, List<Books> booksInRange)
+    {
+        if (string.IsNullOrEmpty(order))
+        {
+            order = "asc";
+        }
+
+        List<Books> sortedBooks;
+        if (order.ToLower() == "desc")
+        {
+            sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
+        }
+        else if (order.ToLower() == "asc")
+        {
+            sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
+        }
+        else
+        {
+            throw new ArgumentException("Invalid order method");
+        }
+                     
+        return sortedBooks;
+
+    }
+
     public async Task<BookUpdateResult> UpdateBookAsync(int id, Books book)
     {
         // Setting the ID from the URL to book object
@@ -189,7 +236,18 @@ public class BooksService
         return new BookUpdateResult { IsSuccess = true, Book = book };
     }
 
-    public async Task<bool> DeleteBookByIsbnAsync(string isbn)
+    public bool IsValidIsbn(long isbn)
+    {
+        // Add your ISBN validation logic here
+        // For example, check if it is 10 or 13 characters long and consists only of digits
+        if (isbn.ToString().Length == 10 || isbn.ToString().Length == 13)
+        {
+            return isbn.ToString().All(char.IsDigit);
+        }
+        return false;
+    }
+
+    public async Task<bool> DeleteBookByIsbnAsync(long isbn)
     {
         var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
         return result > 0;
