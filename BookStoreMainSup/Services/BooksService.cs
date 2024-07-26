@@ -9,6 +9,7 @@ public class BookUpdateResult
     public bool IsSuccess { get; set; }
     public Books Book { get; set; }
     public string ErrorMessage { get; set; }
+    public string price;
 }
 public class BooksService
 {
@@ -236,23 +237,34 @@ public class BooksService
         return new BookUpdateResult { IsSuccess = true, Book = book };
     }
 
-    public bool IsValidIsbn(long isbn)
-    {
-        // Add your ISBN validation logic here
-        // For example, check if it is 10 or 13 characters long and consists only of digits
-        if (isbn.ToString().Length == 10 || isbn.ToString().Length == 13)
-        {
-            return isbn.ToString().All(char.IsDigit);
-        }
-        return false;
-    }
-
     public async Task<bool> DeleteBookByIsbnAsync(long isbn)
     {
-        var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
-        return result > 0;
+        var book = await _context.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
+        if (book == null)
+        {
+            return false;
+        }
+
+        _context.Books.Remove(book);
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 
+    //public bool ValidatePrice(double price, out string validationMessage)
+    //{
+    //    validationMessage = string.Empty;
+
+    //    // Ensure the price is a positive double
+    //    if (price.GetType() == typeof(string))
+    //    {
+    //        validationMessage = "Price must be a positive double value.";
+    //        return false;
+    //    }
+
+    //    return true;
+    //}
+
     private bool IsPositive(double value) => value > 0;
-    private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
+    //private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
 }
