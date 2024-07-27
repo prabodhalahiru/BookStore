@@ -103,7 +103,13 @@ namespace BookStoreMainSup.Controllers
                     return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
                 }
 
+                user.IsLoggedIn = true;
+                await _authService.UpdateUserAsync(user);
+
                 var token = _authService.GenerateJwtToken(user);
+
+                // Log the claims in the token for debugging
+                _authService.LogTokenClaims(token);
 
                 return Ok(new { token });
             }
@@ -114,9 +120,11 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+
+
         [HttpPost("logout")]
         [Authorize]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
@@ -124,17 +132,49 @@ namespace BookStoreMainSup.Controllers
                 if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
                     var token = authHeader.Substring("Bearer ".Length).Trim();
-                    _tokenRevocationService.RevokeToken(token);
-                    return Ok(new { message = "User logged out successfully" });
+                    _logger.LogInformation($"Attempting to log out user with token: {token}");
+
+                    // Log the token claims for debugging
+                    _authService.LogTokenClaims(token);
+
+                    // Get the user by token
+                    var user = await _authService.GetUserByTokenAsync(token);
+                    if (user != null)
+                    {
+                        _logger.LogInformation($"User found: {user.Username}. Updating IsLoggedIn status to false.");
+
+                        // Update the user's IsLoggedIn status
+                        user.IsLoggedIn = false;
+                        await _authService.UpdateUserAsync(user);
+
+                        // Revoke the token
+                        _tokenRevocationService.RevokeToken(token);
+
+                        return Ok(new { message = "User logged out successfully" });
+                    }
+
+                    _logger.LogWarning("Invalid token or user not found");
+                    return BadRequest(new { message = "Invalid token or user not found" });
                 }
 
+                _logger.LogWarning("User not logged in");
                 return BadRequest(new { message = "User not logged in" });
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "Error occurred in Logout method.");
                 return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in Logout method.");
+                return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
+            }
         }
+
+
+
+
+
     }
 }

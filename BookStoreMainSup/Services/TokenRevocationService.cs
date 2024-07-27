@@ -11,16 +11,18 @@
     {
         private readonly List<string> _revokedTokens = new List<string>();
 
-        // Revoke a token
         public void RevokeToken(string token)
         {
-            _revokedTokens.Add(token);
+            if (!_revokedTokens.Contains(token))
+            {
+                _revokedTokens.Add(token);
+            }
         }
 
-        // Check if a token is revoked
         public bool IsTokenRevoked(string token)
         {
             return _revokedTokens.Contains(token);
         }
     }
+
 }

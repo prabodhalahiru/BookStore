@@ -1,21 +1,36 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System;
-using BookStoreMainSup.Data;
+﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 
-public class AdminService
+namespace BookStoreMainSup.Services
 {
-    private readonly ApplicationDbContext _context;
-
-    public AdminService(ApplicationDbContext context)
+    public class AdminService
     {
-        _context = context;
-    }
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
 
-    public IEnumerable<User> GetLoggedUsers()
-    {
-        // Implement logic to retrieve logged users
-        return _context.Users.Where(u => u.IsLoggedIn).ToList();
+        public AdminService(ApplicationDbContext context, IConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
+        }
+
+        public async Task<bool> AdminExists()
+        {
+            return await _context.Users.AnyAsync(u => u.IsAdmin);
+        }
+
+        public async Task AddAdminAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<User>> GetLoggedInUsersAsync()
+        {
+            return await _context.Users.Where(u => u.IsLoggedIn).ToListAsync();
+        }
     }
 }
