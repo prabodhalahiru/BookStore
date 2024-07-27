@@ -41,7 +41,6 @@ public class AuthService
         await _context.SaveChangesAsync();
     }
 
-
     public async Task<List<User>> GetLoggedInUsersAsync()
     {
         return await _context.Users.Where(u => u.IsLoggedIn).ToListAsync();
@@ -177,7 +176,7 @@ public class AuthService
         return true;
     }
 
-    private bool IsValidEmail(string email)
+    public bool IsValidEmail(string email)
     {
         try
         {
@@ -235,6 +234,44 @@ public class AuthService
     public async Task<User> GetUserByIdAsync(int userId)
     {
         return await _context.Users.FindAsync(userId);
+    }
+
+
+    public bool ValidatePassword(string password, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (password.Length < 5)
+        {
+            validationMessage = ErrorMessages.PasswordLength;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[a-z]"))
+        {
+            validationMessage = ErrorMessages.PasswordLowerCha;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[A-Z]"))
+        {
+            validationMessage = ErrorMessages.PasswordUpperCha;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"\d"))
+        {
+            validationMessage = ErrorMessages.PasswordNumb;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/]"))
+        {
+            validationMessage = ErrorMessages.PasswordScpecialCha;
+            return false;
+        }
+
+        return true;
     }
 
 

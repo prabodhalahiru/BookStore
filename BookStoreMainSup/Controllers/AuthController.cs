@@ -175,7 +175,131 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        [HttpPut("update-details")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUserDetails([FromBody] UpdateUserDto request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
+                if (!string.IsNullOrEmpty(request.Username) && await _authService.UserExistsByUsername(request.Username))
+                {
+                    return BadRequest(new { message = ErrorMessages.UsernameExists });
+                }
+
+                if (!string.IsNullOrEmpty(request.Email) && await _authService.UserExistsByEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailExists });
+                }
+
+                var user = await _authService.GetUserByIdAsync(userId);
+
+                if (!string.IsNullOrEmpty(request.Username))
+                {
+                    user.Username = request.Username;
+                }
+
+                if (!string.IsNullOrEmpty(request.Email))
+                {
+                    if (!_authService.IsValidEmail(request.Email))
+                    {
+                        return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
+                    }
+                    user.Email = request.Email;
+                }
+
+                await _authService.UpdateUserAsync(user);
+
+                return Ok(new { message = "User details updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in UpdateUserDetails method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
+            }
+        }
+
+
+        //[HttpPut("update-password")]
+        //[Authorize]
+        //public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
+        //{
+        //    try
+        //    {
+        //        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        //        var user = await _authService.GetUserByIdAsync(userId);
+
+        //        if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+        //        {
+        //            return BadRequest(new { message = "Old password is incorrect" });
+        //        }
+
+        //        if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
+        //        {
+        //            return BadRequest(new { message = validationMessage });
+        //        }
+
+        //        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        //        await _authService.UpdateUserAsync(user);
+
+        //        // Revoke the user's token
+        //        var authHeader = Request.Headers["Authorization"].ToString();
+        //        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            var token = authHeader.Substring("Bearer ".Length).Trim();
+        //            _tokenRevocationService.RevokeToken(token);
+        //        }
+
+        //        return Ok(new { message = "Password changed, please login again" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error occurred in UpdatePassword method.");
+        //        return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
+        //    }
+        //}
+
+        [HttpPut("update-password")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var user = await _authService.GetUserByIdAsync(userId);
+
+                if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+                {
+                    return BadRequest(new { message = "Old password is incorrect" });
+                }
+
+                if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
+                {
+                    return BadRequest(new { message = validationMessage });
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                user.IsLoggedIn = false; // Set IsLoggedIn to false
+
+                await _authService.UpdateUserAsync(user);
+
+                // Revoke the user's token
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var token = authHeader.Substring("Bearer ".Length).Trim();
+                    _tokenRevocationService.RevokeToken(token);
+                }
+
+                return Ok(new { message = "Password changed, please login again" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in UpdatePassword method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
+            }
+        }
 
 
 
