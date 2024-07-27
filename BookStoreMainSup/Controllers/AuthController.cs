@@ -98,6 +98,11 @@ namespace BookStoreMainSup.Controllers
                     return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
                 }
 
+                if (!user.IsActive)
+                {
+                    return Unauthorized(new { message = "Your account is temporarily deactivated. Please contact the admin." });
+                }
+
                 if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 {
                     return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
@@ -108,9 +113,6 @@ namespace BookStoreMainSup.Controllers
 
                 var token = _authService.GenerateJwtToken(user);
 
-                // Log the claims in the token for debugging
-                _authService.LogTokenClaims(token);
-
                 return Ok(new { token });
             }
             catch (Exception ex)
@@ -119,6 +121,7 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in Login method: {ex.Message}" });
             }
         }
+
 
 
 

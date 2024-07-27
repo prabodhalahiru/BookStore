@@ -5,6 +5,7 @@ using BookStoreMainSup.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -69,7 +70,24 @@ namespace BookStoreMainSup.Controllers
             try
             {
                 var loggedInUsers = await _adminService.GetLoggedInUsersAsync();
-                return Ok(loggedInUsers);
+                var books = await _adminService.GetBooksCountByUserAsync();
+
+                if (loggedInUsers == null || loggedInUsers.Count == 0)
+                {
+                    return NotFound(new { message = "Currently no logged in users" });
+                }
+
+                var userResponses = loggedInUsers.Select(user => new UserResponseDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    IsLoggedIn = user.IsLoggedIn,
+                    IsAdmin = user.IsAdmin,
+                    BooksCreated = books.ContainsKey(user.Id) ? books[user.Id] : 0
+                }).ToList();
+
+                return Ok(userResponses);
             }
             catch (Exception ex)
             {
@@ -77,5 +95,127 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in GetLoggedInUsers method: {ex.Message}" });
             }
         }
+
+
+
+        [HttpGet("books-count-by-user")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetBooksCountByUser()
+        {
+            try
+            {
+                var booksCountByUser = await _adminService.GetBooksCountByUserAsync();
+                return Ok(booksCountByUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetBooksCountByUser method.");
+                return StatusCode(500, new { message = $"Internal server error in GetBooksCountByUser method: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("books-by-user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetBooksByUser(string userId)
+        {
+            if (!int.TryParse(userId, out int parsedUserId))
+            {
+                return BadRequest(new { message = "Enter a valid User ID" });
+            }
+
+            try
+            {
+                var user = await _authService.GetUserByIdAsync(parsedUserId);
+                if (user == null)
+                {
+                    return NotFound(new { message = "No users matched the id" });
+                }
+
+                var books = await _adminService.GetBooksByUserAsync(parsedUserId);
+                if (books == null || books.Count == 0)
+                {
+                    return NotFound(new { message = "No books found for the given user" });
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetBooksByUser method.");
+                return StatusCode(500, new { message = $"Internal server error in GetBooksByUser method: {ex.Message}" });
+            }
+        }
+
+
+        [HttpGet("registered-users")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllRegisteredUsers()
+        {
+            try
+            {
+                var users = await _adminService.GetAllRegisteredUsersAsync();
+                if (users == null || users.Count == 0)
+                {
+                    return NotFound(new { message = "No registered users available" });
+                }
+
+                var books = await _adminService.GetBooksCountByUserAsync();
+
+                var userResponses = users.Select(user => new UserResponseDto
+                {
+                    Id = user.Id,
+                    Username = user.Username,
+                    Email = user.Email,
+                    IsLoggedIn = user.IsLoggedIn,
+                    IsAdmin = user.IsAdmin,
+                    BooksCreated = books.ContainsKey(user.Id) ? books[user.Id] : 0  // Count of books created
+                }).ToList();
+
+                return Ok(userResponses);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetAllRegisteredUsers method.");
+                return StatusCode(500, new { message = $"Internal server error in GetAllRegisteredUsers method: {ex.Message}" });
+            }
+        }
+
+
+        [HttpPost("deactivate-user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeactivateUser(string userId, [FromBody] UserActivationDto request)
+        {
+            if (!int.TryParse(userId, out int parsedUserId))
+            {
+                return BadRequest(new { message = "Enter a valid user id" });
+            }
+
+            try
+            {
+                var user = await _authService.GetUserByIdAsync(parsedUserId);
+                if (user == null)
+                {
+                    return NotFound(new { message = "No users matched the id" });
+                }
+
+                user.IsActive = request.IsActive;
+                await _authService.UpdateUserAsync(user);
+
+                string status = request.IsActive ? "activated" : "deactivated";
+                return Ok(new { message = $"User successfully {status}." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in DeactivateUser method.");
+                return StatusCode(500, new { message = $"Internal server error in DeactivateUser method: {ex.Message}" });
+            }
+        }
+
+
+
+
+
+
+
     }
 }

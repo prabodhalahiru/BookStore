@@ -232,6 +232,10 @@ public class AuthService
         }
     }
 
+    public async Task<User> GetUserByIdAsync(int userId)
+    {
+        return await _context.Users.FindAsync(userId);
+    }
 
 
 }

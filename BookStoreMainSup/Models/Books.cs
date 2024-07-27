@@ -17,5 +17,6 @@ namespace BookStoreMainSup.Models
 
         [Required]
         public long isbn { get; set; }
+        public int CreatedBy { get; set; }
     }
 }

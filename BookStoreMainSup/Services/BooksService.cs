@@ -251,20 +251,6 @@ public class BooksService
         return true;
     }
 
-    //public bool ValidatePrice(double price, out string validationMessage)
-    //{
-    //    validationMessage = string.Empty;
-
-    //    // Ensure the price is a positive double
-    //    if (price.GetType() == typeof(string))
-    //    {
-    //        validationMessage = "Price must be a positive double value.";
-    //        return false;
-    //    }
-
-    //    return true;
-    //}
-
     private bool IsPositive(double value) => value > 0;
     //private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
 }

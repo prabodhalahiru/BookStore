@@ -16,5 +16,6 @@ public class User
     [Required]
     public bool IsLoggedIn { get; set; }
 
-    public bool IsAdmin { get; set; } // Add this property
+    public bool IsAdmin { get; set; }
+    public bool IsActive { get; set; } = true;
 }

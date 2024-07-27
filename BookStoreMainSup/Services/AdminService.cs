@@ -32,5 +32,23 @@ namespace BookStoreMainSup.Services
         {
             return await _context.Users.Where(u => u.IsLoggedIn).ToListAsync();
         }
+
+        public async Task<Dictionary<int, int>> GetBooksCountByUserAsync()
+        {
+            return await _context.Books
+                .GroupBy(b => b.CreatedBy)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Count);
+        }
+
+        public async Task<List<Books>> GetBooksByUserAsync(int userId)
+        {
+            return await _context.Books.Where(b => b.CreatedBy == userId).ToListAsync();
+        }
+
+        public async Task<List<User>> GetAllRegisteredUsersAsync()
+        {
+            return await _context.Users.ToListAsync();
+        }
     }
 }

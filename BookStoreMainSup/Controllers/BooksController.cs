@@ -10,6 +10,7 @@ using BookStoreMainSup.Resources;
 using System.Text.RegularExpressions;
 using System;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -186,20 +187,14 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
-        // POST: api/Books
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Books>> PostBook([FromBody] Books book)
+        public async Task<ActionResult<BookResponseDto>> PostBook([FromBody] Books book)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-
-            //if (!_booksService.ValidatePrice(book.Price, out string priceValidationMessage))
-            //{
-            //    return BadRequest(new { message = priceValidationMessage });
-            //}
 
             if (!_booksService.ValidateBook(book, out string validationMessage))
             {
@@ -211,17 +206,35 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(new { message = "A book with this ISBN already exists." });
             }
 
+            // Get the user ID from the token
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+            // Set the CreatedBy property
+            book.CreatedBy = userId;
+
             try
             {
                 await _booksService.AddBookAsync(book);
-                return StatusCode(201, book);
+
+                var bookResponse = new BookResponseDto
+                {
+                    Id = book.Id,
+                    Title = book.Title,
+                    Author = book.Author,
+                    Price = book.Price,
+                    Isbn = book.isbn
+                };
+
+                return StatusCode(201, bookResponse);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while sorting books by price range.");
+                _logger.LogError(ex, "An error occurred while adding the book.");
                 return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
             }
         }
+
+
 
         // DELETE: api/Books/{isbn}
         [Authorize]
