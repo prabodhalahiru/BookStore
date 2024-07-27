@@ -29,18 +29,4 @@ public class AdminController : ControllerBase
             return StatusCode(500, ex.Message);
         }
     }
-
-    //[HttpPost("purchaseBook")]
-    //public IActionResult PurchaseBook([FromBody] PurchaseBookDto purchaseDto)
-    //{
-    //    try
-    //    {
-    //        _adminService.PurchaseBook(purchaseDto.UserId, purchaseDto.BookId);
-    //        return Ok();
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        return StatusCode(500, ex.Message);
-    //    }
-    //}
 }
