@@ -189,12 +189,17 @@ namespace BookStoreMainSup.Controllers
         // POST: api/Books
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Books>> PostBook(Books book)
+        public async Task<ActionResult<Books>> PostBook([FromBody] Books book)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
+
+            //if (!_booksService.ValidatePrice(book.Price, out string priceValidationMessage))
+            //{
+            //    return BadRequest(new { message = priceValidationMessage });
+            //}
 
             if (!_booksService.ValidateBook(book, out string validationMessage))
             {
@@ -213,37 +218,38 @@ namespace BookStoreMainSup.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while saving the book.");
-                return StatusCode(500, new { message = "An error occurred while saving your book." });
+                _logger.LogError(ex, "An error occurred while sorting books by price range.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
             }
         }
 
         // DELETE: api/Books/{isbn}
         [Authorize]
         [HttpDelete("{isbn}")]
-        public async Task<IActionResult> DeleteBook(long identifier)
+        public async Task<IActionResult> DeleteBookByIsbn(string isbn)
         {
+            // Validate that the input is a long numeric value
+            if (!long.TryParse(isbn, out long parsedIsbn) || parsedIsbn <= 0)
+            {
+                return BadRequest(new { message = "Invalid ISBN number. It must be a positive numeric value." });
+            }
+
             try
             {
-                // Validate if the identifier is an ISBN
-                if (!_booksService.IsValidIsbn(identifier))
+                var result = await _booksService.DeleteBookByIsbnAsync(parsedIsbn);
+                if (result)
                 {
-                    return BadRequest(new { message = "Please enter a valid ISBN" });
+                    return Ok(new { Message = $"Book with ISBN {parsedIsbn} was successfully deleted." });
                 }
-
-                var isDeleted = await _booksService.DeleteBookByIsbnAsync(identifier);
-
-                if (!isDeleted)
+                else
                 {
-                    return BadRequest(new { message = "Book not found with the provided ISBN" });
+                    return BadRequest(new { message = $"Book with ISBN {parsedIsbn} not found." });
                 }
-
-                return Ok(new { message = "Book deleted successfully", isbn = identifier });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while deleting the book.");
-                return StatusCode(500, new { message = "Something went wrong!" });
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request." });
             }
         }
 
