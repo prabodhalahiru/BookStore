@@ -198,6 +198,11 @@ public class BooksService
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "The ID in the URL does not match the ID in the body." };
         }
 
+        if (book.isbn == 0) // Assuming ISBN is a long or int and not provided as a string
+        {
+            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "ISBN Number is required to proceed!" };
+        }
+
         if (string.IsNullOrEmpty(book.isbn.ToString()))
         {
             return new BookUpdateResult { IsSuccess = false, ErrorMessage = "You should enter ISBN Number" };
