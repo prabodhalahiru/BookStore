@@ -136,5 +136,106 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
             }
         }
+
+        [HttpPut("update/{username}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUser([FromQuery] string username, [FromBody] UserDto request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(username))
+                {
+                    return BadRequest(new { message = "The username query parameter is required." });
+                }
+
+                var user = await _authService.GetUserByUsernameAsync(username);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+
+                if (!_authService.ValidateUserDto(request, out string validationMessage))
+                {
+                    _logger.LogWarning("Validation failed for update request: {ValidationMessage}", validationMessage);
+                    return BadRequest(new { message = validationMessage });
+                }
+
+                bool isUpdated = false;
+                if (!string.IsNullOrEmpty(request.Username) && request.Username != user.Username)
+                {
+                    user.Username = request.Username;
+                    isUpdated = true;
+                }
+                if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
+                {
+                    user.Email = request.Email;
+                    isUpdated = true;
+                }
+                if (!string.IsNullOrEmpty(request.Password))
+                {
+                    string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
+                    if (newPasswordHash != user.PasswordHash)
+                    {
+                        user.PasswordHash = newPasswordHash;
+                        isUpdated = true;
+                    }
+                }
+
+                if (!isUpdated)
+                {
+                    return Ok(new { message = "No updates were made as the details are the same" });
+                }
+
+                await _authService.UpdateUserAsync(user);
+
+                _logger.LogInformation("User updated successfully for username: {Username}", username);
+                return Ok(new { message = "User updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in UpdateUser method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdateUser method: {ex.Message}" });
+            }
+        }
+
+        [HttpGet("GetAllUsers")]
+        [Authorize]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            try
+            {
+                var users = await _authService.GetAllUsersAsync();
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in GetAllUsers method.");
+                return StatusCode(500, new { message = $"Internal server error in GetAllUsers method: {ex.Message}" });
+            }
+        }
+
+        [HttpDelete("DeletUser/{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            try
+            {
+                var user = await _authService.GetUserByIdAsync(id);
+                if (user == null)
+                {
+                    return NotFound(new { message = "User not found" });
+                }
+
+                await _authService.DeleteUserAsync(id);
+
+                return Ok(new { message = "User deleted successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in DeleteUser method.");
+                return StatusCode(500, new { message = $"Internal server error in DeleteUser method: {ex.Message}" });
+            }
+        }
+
     }
 }
