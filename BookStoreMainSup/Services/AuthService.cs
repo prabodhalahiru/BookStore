@@ -14,22 +14,65 @@ using System.Net.Mail;
 using MimeKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Logging;
+using BookStoreMainSup.Controllers;
 
 public class AuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<AuthService> _logger; // Add logger dependency
 
-    public AuthService(ApplicationDbContext context, IConfiguration configuration)
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
     {
         _context = context;
         _configuration = configuration;
+        _logger = logger; // Initialize logger
     }
 
     public async Task<bool> UserExistsByEmail(string email)
     {
         return await _context.Users.AnyAsync(u => u.Email == email);
     }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        _context.Users.Update(user);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<User>> GetLoggedInUsersAsync()
+    {
+        return await _context.Users.Where(u => u.IsLoggedIn).ToListAsync();
+    }
+
+
+    public async Task<User> GetUserByTokenAsync(string token)
+    {
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jwtToken = handler.ReadJwtToken(token);
+
+            // Ensure the token has the expected claim
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier || claim.Type == "nameid");
+            if (userIdClaim == null)
+            {
+                throw new InvalidOperationException("Token does not contain user ID claim");
+            }
+
+            var userId = int.Parse(userIdClaim.Value);
+            return await _context.Users.FindAsync(userId);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Error parsing token: {ex.Message}", ex);
+        }
+    }
+
+
+
+
 
     public async Task<bool> UserExistsByUsername(string username)
     {
@@ -51,22 +94,32 @@ public class AuthService
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+        var claims = new List<Claim>
+    {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Name, user.Username),
+        new Claim(ClaimTypes.Email, user.Email)
+    };
+
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, "Admin"));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(ClaimTypes.Email, user.Email)
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddMonths(1),
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
+
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
+
+
 
     public bool ValidateUserDto(UserDto request, out string validationMessage)
     {
@@ -123,7 +176,7 @@ public class AuthService
         return true;
     }
 
-    private bool IsValidEmail(string email)
+    public bool IsValidEmail(string email)
     {
         try
         {
@@ -165,5 +218,61 @@ public class AuthService
             return false;
         }
     }
+
+    public void LogTokenClaims(string token)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var jwtToken = handler.ReadJwtToken(token);
+        var claims = jwtToken.Claims.Select(claim => new { claim.Type, claim.Value });
+
+        foreach (var claim in claims)
+        {
+            _logger.LogInformation($"Claim Type: {claim.Type}, Claim Value: {claim.Value}");
+        }
+    }
+
+    public async Task<User> GetUserByIdAsync(int userId)
+    {
+        return await _context.Users.FindAsync(userId);
+    }
+
+
+    public bool ValidatePassword(string password, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (password.Length < 5)
+        {
+            validationMessage = ErrorMessages.PasswordLength;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[a-z]"))
+        {
+            validationMessage = ErrorMessages.PasswordLowerCha;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[A-Z]"))
+        {
+            validationMessage = ErrorMessages.PasswordUpperCha;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"\d"))
+        {
+            validationMessage = ErrorMessages.PasswordNumb;
+            return false;
+        }
+
+        if (!Regex.IsMatch(password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/]"))
+        {
+            validationMessage = ErrorMessages.PasswordScpecialCha;
+            return false;
+        }
+
+        return true;
+    }
+
 
 }

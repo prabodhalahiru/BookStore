@@ -19,6 +19,9 @@ builder.Services.AddScoped<IBooksService, BooksService>();
 // Register the AuthService
 builder.Services.AddScoped<AuthService>();
 
+// Register the AdminService
+builder.Services.AddScoped<AdminService>();
+
 // Configure JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
 builder.Services.AddAuthentication(options =>
