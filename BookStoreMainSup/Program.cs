@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using BookStoreMainSup.Data;
 using BookStoreMainSup.Services;
+using BookStoreMainSup.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>()
 
 // Register the AuthService
 builder.Services.AddScoped<AuthService>();
+
+// Register the BooksService
+builder.Services.AddScoped<IBooksService, BooksService>();
 
 // Configure JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);

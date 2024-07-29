@@ -19,13 +19,12 @@ namespace BookStoreMainSup.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
-        private readonly BooksService _booksService;
+        private readonly IBooksService _booksService;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
+        public BooksController(ILogger<BooksController> logger, IBooksService booksService)
         {
-            _db = db;
             _logger = logger;
-            _booksService = new BooksService(db);
+            _booksService = booksService;
         }
 
         // Get: api/Books
@@ -156,7 +155,7 @@ namespace BookStoreMainSup.Controllers
 
 
 
-        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
+        /*// GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
         [HttpGet("sortbyrange")]
         public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
         {
@@ -184,7 +183,7 @@ namespace BookStoreMainSup.Controllers
                 _logger.LogError(ex, "An error occurred while sorting books by price range.");
                 return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
             }
-        }
+        }*/
 
         // POST: api/Books
         [Authorize]

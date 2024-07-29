@@ -11,7 +11,7 @@ public class BookUpdateResult
     public string ErrorMessage { get; set; }
     public string price;
 }
-public class BooksService
+public class BooksService: IBooksService
 {
     private readonly ApplicationDbContext _context;
 
@@ -271,5 +271,10 @@ public class BooksService
     //}
 
     private bool IsPositive(double value) => value > 0;
+
+    public Task<bool> DeleteBookByIsbnAsync(string isbn)
+    {
+        throw new NotImplementedException();
+    }
     //private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
 }
