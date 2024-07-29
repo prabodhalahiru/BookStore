@@ -11,6 +11,9 @@ public interface IBooksService
     Task<List<Books>> GetBooksAsync();
     BooksDto MapBookToDto(Books book);
     Task<List<Books>> SearchBooksAsync(string query);
+    Task<List<Books>> GetBooksInRange(double? minPrice, double? maxPrice);
+
+    Task<List<Books>> SortBooksByOrder(string? order, List<Books> booksInRange);
     Task<UpdateMessages> UpdateBookAsync(int id, Books book);
     bool ValidateBook(Books book, out string validationMessage);
 }

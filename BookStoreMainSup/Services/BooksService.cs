@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 //    public Books Book { get; set; }
 //    public string ErrorMessage { get; set; }
 //}
-public class BooksService
+public class BooksService: IBooksService
 {
     private readonly ApplicationDbContext _context;
 

@@ -15,7 +15,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 
 // Register the TokenRevocationService
 builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>();
-
+builder.Services.AddScoped<IBooksService, BooksService>();
 // Register the AuthService
 builder.Services.AddScoped<AuthService>();
 
