@@ -18,7 +18,7 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+       // private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
         private readonly IBooksService _booksService;
 
