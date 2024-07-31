@@ -77,6 +77,18 @@ public class BooksService: IBooksService
             return false;
         }
 
+        if (!IsValidTitle(book.Title))
+        {
+            validationMessage = "Title Should be less than or equal to 25 characters!";
+            return false;
+        }
+
+        if (!IsValidTitle(book.Author))
+        {
+            validationMessage = "Author Name Should be less than or equal to 25 characters!";
+            return false;
+        }
+
         return true;
     }
 
