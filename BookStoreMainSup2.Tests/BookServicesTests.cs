@@ -1,6 +1,7 @@
 ﻿using BookStoreMainSup.Controllers;
 using BookStoreMainSup.Helper;
 using BookStoreMainSup.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -184,64 +185,278 @@ namespace BookStoreMainSup2.Tests
             Assert.Equal("Validation failed", message);
         }
 
-        //[Fact]
-        //public async Task PostBook_ReturnsBadRequest_WhenISBNAlreadyExists()
-        //{
-        //    // Arrange
-        //    var book = new Books { isbn = 1234567890, Title = "Existing ISBN Book" };
-        //    _booksServiceMock.Setup(service => service.BookExistsAsync(book.isbn.ToString())).ReturnsAsync(true);
-
-        //    // Act
-        //    var result = await _controller.PostBook(book);
-
-        //    // Assert
-        //    var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
-
-        //    // Ensure the result is not null before accessing its properties
-        //    Assert.NotNull(badRequestResult.Value);
-
-        //    var message = badRequestResult.Value.GetType().GetProperty("message")?.GetValue(badRequestResult.Value, null)?.ToString();
-        //    Assert.Equal("A book with this ISBN already exists.", message);
-        //}
+        //New check
 
         [Fact]
-        public async Task PostBook_ReturnsStatusCode201_WhenBookIsCreated()
+        public async Task SearchBooks_ReturnsOkResult_WithBooks()
         {
             // Arrange
-            var book = new Books
+            var query = "TestQuery";
+            var books = new List<Books>
+        {
+            new Books { Id = 1, Title = "Test Book 1", Author = "Author 1", Price = 10.0, isbn = 1234567890123 },
+            new Books { Id = 2, Title = "Test Book 2", Author = "Author 2", Price = 15.0, isbn = 1234567890124 }
+        };
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?query={query}");
+            _controller.ControllerContext = new ControllerContext
             {
-                isbn = 1234567890,
-                Title = "New Book",
-                Author = "Author",
-                Price = 19.99
+                HttpContext = httpContext
             };
 
-            var bookResponse = new BookResponseDto
-            {
-                Id = 1, // Assuming the ID is assigned after creation
-                Title = book.Title,
-                Author = book.Author,
-                Price = book.Price,
-                Isbn = book.isbn
-            };
-
-            // Mock the services
-            _booksServiceMock.Setup(service => service.BookExistsAsync(book.isbn.ToString())).ReturnsAsync(false);
-            _booksServiceMock.Setup(service => service.AddBookAsync(book)).Returns(Task.CompletedTask);
+            _booksServiceMock.Setup(service => service.SearchBooksAsync(query)).ReturnsAsync(books);
 
             // Act
-            var result = await _controller.PostBook(book);
+            var result = await _controller.SearchBooks();
 
             // Assert
-            var objectResult = Assert.IsType<ObjectResult>(result.Result);
-            Assert.Equal(201, objectResult.StatusCode);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var returnedBooks = Assert.IsType<List<Books>>(okResult.Value);
+            Assert.Equal(books.Count, returnedBooks.Count);
+            Assert.Equal(books[0].Title, returnedBooks[0].Title);
+            Assert.Equal(books[1].Title, returnedBooks[1].Title);
+        }
 
-            var returnedBook = Assert.IsType<BookResponseDto>(objectResult.Value);
-            Assert.Equal(bookResponse.Id, returnedBook.Id);
-            Assert.Equal(bookResponse.Title, returnedBook.Title);
-            Assert.Equal(bookResponse.Author, returnedBook.Author);
-            Assert.Equal(bookResponse.Price, returnedBook.Price);
-            Assert.Equal(bookResponse.Isbn, returnedBook.Isbn);
+        [Fact]
+        public async Task SearchBooks_ReturnsNotFound_WhenNoRecordsFound()
+        {
+            // Arrange
+            var query = "TestQuery";
+            var books = new List<Books>();
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?query={query}");
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+
+            _booksServiceMock.Setup(service => service.SearchBooksAsync(query)).ReturnsAsync(books);
+
+            // Act
+            var result = await _controller.SearchBooks();
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var messageProperty = notFoundResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(notFoundResult.Value).ToString();
+            Assert.Equal("No records found", message);
+        }
+
+        [Fact]
+        public async Task SearchBooks_ReturnsBadRequest_OnArgumentException()
+        {
+            // Arrange
+            var query = "TestQuery";
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?query={query}");
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+
+            _booksServiceMock.Setup(service => service.SearchBooksAsync(query))
+                .ThrowsAsync(new ArgumentException("Invalid query parameter"));
+
+            // Act
+            var result = await _controller.SearchBooks();
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var messageProperty = badRequestResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(badRequestResult.Value).ToString();
+            Assert.Equal("Invalid query parameter", message);
+        }
+
+        [Fact]
+        public async Task SearchBooks_ReturnsStatusCode500_OnException()
+        {
+            // Arrange
+            var query = "TestQuery";
+
+            var httpContext = new DefaultHttpContext();
+            httpContext.Request.QueryString = new QueryString($"?query={query}");
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+
+            _booksServiceMock.Setup(service => service.SearchBooksAsync(query))
+                .ThrowsAsync(new Exception("Internal server error"));
+
+            // Act
+            var result = await _controller.SearchBooks();
+
+            // Assert
+            var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
+            Assert.Equal(500, statusCodeResult.StatusCode);
+            var messageProperty = statusCodeResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(statusCodeResult.Value).ToString();
+            Assert.Equal("The server encountered an error and could not complete your request", message);
+        }
+
+        [Fact]
+        public async Task DeleteBookByIsbn_ReturnsBadRequest_WhenIsbnIsInvalid()
+        {
+            // Arrange
+            var invalidIsbn = "invalidIsbn";
+
+            // Act
+            var result = await _controller.DeleteBookByIsbn(invalidIsbn);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var messageProperty = badRequestResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(badRequestResult.Value).ToString();
+            Assert.Equal("Invalid ISBN number. It must be a positive numeric value.", message);
+        }
+
+        [Fact]
+        public async Task DeleteBookByIsbn_ReturnsBadRequest_WhenIsbnNotFound()
+        {
+            // Arrange
+            var validIsbn = "1234567890";
+            _booksServiceMock.Setup(service => service.DeleteBookByIsbnAsync(long.Parse(validIsbn))).ReturnsAsync(false);
+
+            // Act
+            var result = await _controller.DeleteBookByIsbn(validIsbn);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+            var messageProperty = badRequestResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(badRequestResult.Value).ToString();
+            Assert.Equal($"Book with ISBN {validIsbn} not found.", message);
+        }
+
+        [Fact]
+        public async Task DeleteBookByIsbn_ReturnsOk_WhenBookIsDeleted()
+        {
+            // Arrange
+            var validIsbn = "1234567890";
+            _booksServiceMock.Setup(service => service.DeleteBookByIsbnAsync(long.Parse(validIsbn))).ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.DeleteBookByIsbn(validIsbn);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var messageProperty = okResult.Value.GetType().GetProperty("Message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(okResult.Value).ToString();
+            Assert.Equal($"Book with ISBN {validIsbn} was successfully deleted.", message);
+        }
+
+        [Fact]
+        public async Task DeleteBookByIsbn_ReturnsStatusCode500_OnException()
+        {
+            // Arrange
+            var validIsbn = "1234567890";
+            _booksServiceMock.Setup(service => service.DeleteBookByIsbnAsync(long.Parse(validIsbn)))
+                .ThrowsAsync(new Exception("Internal server error"));
+
+            // Act
+            var result = await _controller.DeleteBookByIsbn(validIsbn);
+
+            // Assert
+            var statusCodeResult = Assert.IsType<ObjectResult>(result);
+            Assert.Equal(500, statusCodeResult.StatusCode);
+            var messageProperty = statusCodeResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(statusCodeResult.Value).ToString();
+            Assert.Equal("The server encountered an error and could not complete your request.", message);
+        }
+
+        [Fact]
+        public async Task SortBooksByPriceRange_ReturnsNotFound_WhenNoBooksInRange()
+        {
+            // Arrange
+            double? minPrice = 10.0;
+            double? maxPrice = 50.0;
+            string order = "asc";
+
+            _booksServiceMock.Setup(service => service.GetBooksInRange(minPrice, maxPrice)).ReturnsAsync(new List<Books>());
+
+            // Act
+            var result = await _controller.SortBooksByPriceRange(minPrice, maxPrice, order);
+
+            // Assert
+            var notFoundResult = Assert.IsType<NotFoundObjectResult>(result.Result);
+            var messageProperty = notFoundResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(notFoundResult.Value).ToString();
+            Assert.Equal("No Books available in Range", message);
+        }
+
+        [Fact]
+        public async Task SortBooksByPriceRange_ReturnsOk_WithSortedBooks()
+        {
+            // Arrange
+            double? minPrice = 10.0;
+            double? maxPrice = 50.0;
+            string order = "asc";
+            var booksInRange = new List<Books> { new Books { Title = "Book1", Price = 20 }, new Books { Title = "Book2", Price = 30 } };
+            var sortedBooks = new List<Books> { new Books { Title = "Book1", Price = 20 }, new Books { Title = "Book2", Price = 30 } };
+
+            _booksServiceMock.Setup(service => service.GetBooksInRange(minPrice, maxPrice)).ReturnsAsync(booksInRange);
+            _booksServiceMock.Setup(service => service.SortBooksByOrder(order, booksInRange)).ReturnsAsync(sortedBooks);
+
+            // Act
+            var result = await _controller.SortBooksByPriceRange(minPrice, maxPrice, order);
+
+            // Assert
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            var returnedBooks = Assert.IsType<List<Books>>(okResult.Value);
+            Assert.Equal(sortedBooks, returnedBooks);
+        }
+
+        [Fact]
+        public async Task SortBooksByPriceRange_ReturnsBadRequest_OnArgumentException()
+        {
+            // Arrange
+            double? minPrice = 10.0;
+            double? maxPrice = 50.0;
+            string order = "asc";
+
+            _booksServiceMock.Setup(service => service.GetBooksInRange(minPrice, maxPrice)).ThrowsAsync(new ArgumentException("Invalid argument"));
+
+            // Act
+            var result = await _controller.SortBooksByPriceRange(minPrice, maxPrice, order);
+
+            // Assert
+            var badRequestResult = Assert.IsType<BadRequestObjectResult>(result.Result);
+            var messageProperty = badRequestResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(badRequestResult.Value).ToString();
+            Assert.Equal("Invalid argument", message);
+        }
+
+        [Fact]
+        public async Task SortBooksByPriceRange_ReturnsStatusCode500_OnException()
+        {
+            // Arrange
+            double? minPrice = 10.0;
+            double? maxPrice = 50.0;
+            string order = "asc";
+
+            _booksServiceMock.Setup(service => service.GetBooksInRange(minPrice, maxPrice)).ThrowsAsync(new Exception("Internal server error"));
+
+            // Act
+            var result = await _controller.SortBooksByPriceRange(minPrice, maxPrice, order);
+
+            // Assert
+            var statusCodeResult = Assert.IsType<ObjectResult>(result.Result);
+            Assert.Equal(500, statusCodeResult.StatusCode);
+            var messageProperty = statusCodeResult.Value.GetType().GetProperty("message");
+            Assert.NotNull(messageProperty);
+            var message = messageProperty.GetValue(statusCodeResult.Value).ToString();
+            Assert.Equal("The server encountered an error and could not complete your request", message);
         }
 
 
