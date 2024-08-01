@@ -4,7 +4,6 @@
     public string Email { get; set; }
 }
 
-
 public class UpdatePasswordDto
 {
     public string OldPassword { get; set; }
