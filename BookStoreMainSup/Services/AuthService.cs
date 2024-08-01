@@ -302,41 +302,5 @@ public class AuthService
         return true;
     }
 
-    public bool ValidateUserField(string field, string value, out string validationMessage)
-    {
-        validationMessage = string.Empty;
-
-        if (field == "Username")
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                validationMessage = ErrorMessages.RequiredFieldsIdentifier;
-                return false;
-            }
-
-            if (value.Length < 3 || value.Length > 20 || !Regex.IsMatch(value, @"^[a-zA-Z0-9]+$"))
-            {
-                validationMessage = ErrorMessages.InvalidUsernameFormat;
-                return false;
-            }
-        }
-        else if (field == "Email")
-        {
-            if (string.IsNullOrEmpty(value))
-            {
-                validationMessage = ErrorMessages.RequiredFieldsIdentifier;
-                return false;
-            }
-
-            if (!IsValidEmail(value))
-            {
-                validationMessage = ErrorMessages.InvalidEmailFormat;
-                return false;
-            }
-        }
-
-        return true;
-    }
-
 
 }
