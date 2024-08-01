@@ -18,15 +18,15 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+       // private readonly ApplicationDbContext _db;
         private readonly ILogger<BooksController> _logger;
-        private readonly BooksService _booksService;
+        private readonly IBooksService _booksService;
 
-        public BooksController(ApplicationDbContext db, ILogger<BooksController> logger)
+        public BooksController(ILogger<BooksController> logger, IBooksService booksService)
         {
-            _db = db;
+           // _db = db;
             _logger = logger;
-            _booksService = new BooksService(db);
+            _booksService = booksService;
         }
 
         // Get: api/Books
@@ -157,7 +157,7 @@ namespace BookStoreMainSup.Controllers
 
 
 
-        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
+        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000
         [HttpGet("sortbyrange")]
         public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
         {
@@ -165,7 +165,7 @@ namespace BookStoreMainSup.Controllers
             {
                 // Filter books by price range
                 var booksInRangeResult = await _booksService.GetBooksInRange(minPrice, maxPrice);
-                
+
                 if (booksInRangeResult.Count == 0)
                 {
                     return NotFound(new { message = "No Books available in Range" });
@@ -173,7 +173,7 @@ namespace BookStoreMainSup.Controllers
 
                 // Sort books by order
                 var sortedBooks = await _booksService.SortBooksByOrder(order, booksInRangeResult);
-                
+
                 return Ok(sortedBooks);
             }
             catch (ArgumentException ex)

@@ -1,17 +1,11 @@
 ﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using BookStoreMainSup.Helper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
-public class BookUpdateResult
-{
-    public bool IsSuccess { get; set; }
-    public Books Book { get; set; }
-    public string ErrorMessage { get; set; }
-    public string price;
-}
-public class BooksService
+public class BooksService: IBooksService
 {
     private readonly ApplicationDbContext _context;
 
@@ -71,19 +65,27 @@ public class BooksService
             validationMessage = "Price must be greater than zero.";
             return false;
         }
-        if (book.isbn.ToString().Length <= 10)
+        if (!IsValidISBN(book.isbn))
         {
-            validationMessage = "The length of ISBN should be greater than 10.";
+            validationMessage = "The length of ISBN should be greater than or Equal to 10 and less than or equal to 13.";
             return false;
         }
-        if (book.isbn.ToString().Length >= 13)
-        {
-            validationMessage = "The length of ISBN should be less than 13.";
-            return false;
-        }
+
         if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
         {
             validationMessage = "ISBN should be a number.";
+            return false;
+        }
+
+        if (!IsValidTitle(book.Title))
+        {
+            validationMessage = "Title Should be less than or equal to 25 characters!";
+            return false;
+        }
+
+        if (!IsValidTitle(book.Author))
+        {
+            validationMessage = "Author Name Should be less than or equal to 25 characters!";
             return false;
         }
 
@@ -188,43 +190,58 @@ public class BooksService
 
     }
 
-    public async Task<BookUpdateResult> UpdateBookAsync(int id, Books book)
+    public async Task<UpdateMessages> UpdateBookAsync(int id, Books book)
     {
         // Setting the ID from the URL to book object
         book.Id = id;
 
         if (id != book.Id)
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "The ID in the URL does not match the ID in the body." };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.idMatch };
+        }
+
+        if (book.isbn == 0) // Assuming ISBN is a long or int and not provided as a string
+        {
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.isbnCheck };
         }
 
         if (string.IsNullOrEmpty(book.isbn.ToString()))
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "You should enter ISBN Number" };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.isbnCheck };
         }
 
         if (!IsPositive(book.Price))
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Price should be greater than 0" };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.priceCheck };
         }
 
-        if (book.isbn.ToString().Length < 10 || book.isbn.ToString().Length > 13)
+        if (!IsValidISBN(book.isbn))
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "The length of ISBN should be greater than 10 and less than 13" };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.isbnLength };
+        }
+
+        if (!IsValidTitle(book.Title))
+        {
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.titleCheck };
+        }
+
+        if (!IsValidTitle(book.Author))
+        {
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.authorCheck };
         }
 
         // Retrieve existing book data
         var existingBook = await _context.Books.FindAsync(id);
         if (existingBook == null)
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "Book not found." };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.bookNotFound };
         }
 
         // Checking whether same ISBN number is updating
         var availableISBN = await _context.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
         if (availableISBN)
         {
-            return new BookUpdateResult { IsSuccess = false, ErrorMessage = "This ISBN is available. Please update a unique ISBN" };
+            return new UpdateMessages { IsSuccess = false, ErrorMessage = UpdateMessages.sameISBN };
         }
 
         // Detach the existing entity to avoid tracking issues
@@ -234,23 +251,27 @@ public class BooksService
 
         await _context.SaveChangesAsync();
 
-        return new BookUpdateResult { IsSuccess = true, Book = book };
+        return new UpdateMessages { IsSuccess = true, Book = book };
+    }
+
+    public bool IsValidIsbn(long isbn)
+    {
+        // Add your ISBN validation logic here
+        // For example, check if it is 10 or 13 characters long and consists only of digits
+        if (isbn.ToString().Length == 10 || isbn.ToString().Length == 13)
+        {
+            return isbn.ToString().All(char.IsDigit);
+        }
+        return false;
     }
 
     public async Task<bool> DeleteBookByIsbnAsync(long isbn)
     {
-        var book = await _context.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
-        if (book == null)
-        {
-            return false;
-        }
-
-        _context.Books.Remove(book);
-        await _context.SaveChangesAsync();
-
-        return true;
+        var result = await _context.Database.ExecuteSqlRawAsync("DELETE FROM Books WHERE isbn = {0}", isbn);
+        return result > 0;
     }
 
     private bool IsPositive(double value) => value > 0;
-    //private bool IsValidISBN(int isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
+    private bool IsValidISBN(long isbn) => isbn.ToString().Length >= 10 && isbn.ToString().Length <= 13;
+    private bool IsValidTitle(string title) => title.Length <= 25;
 }
