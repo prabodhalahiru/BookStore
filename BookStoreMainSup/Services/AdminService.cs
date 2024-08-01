@@ -1,43 +1,54 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System;
-using BookStoreMainSup.Data;
+﻿using BookStoreMainSup.Data;
 using BookStoreMainSup.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 
-public class AdminService
+namespace BookStoreMainSup.Services
 {
-    private readonly ApplicationDbContext _context;
-
-    public AdminService(ApplicationDbContext context)
+    public class AdminService
     {
-        _context = context;
+        private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
+
+        public AdminService(ApplicationDbContext context, IConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
+        }
+
+        public async Task<bool> AdminExists()
+        {
+            return await _context.Users.AnyAsync(u => u.IsAdmin);
+        }
+
+        public async Task AddAdminAsync(User user)
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<User>> GetLoggedInUsersAsync()
+        {
+            return await _context.Users.Where(u => u.IsLoggedIn).ToListAsync();
+        }
+
+        public async Task<Dictionary<int, int>> GetBooksCountByUserAsync()
+        {
+            return await _context.Books
+                .GroupBy(b => b.CreatedBy)
+                .Select(g => new { UserId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.UserId, x => x.Count);
+        }
+
+        public async Task<List<Books>> GetBooksByUserAsync(int userId)
+        {
+            return await _context.Books.Where(b => b.CreatedBy == userId).ToListAsync();
+        }
+
+        public async Task<List<User>> GetAllRegisteredUsersAsync()
+        {
+            return await _context.Users.ToListAsync();
+        }
     }
-
-    public IEnumerable<User> GetLoggedUsers()
-    {
-        // Implement logic to retrieve logged users
-        return _context.Users.Where(u => u.IsLoggedIn).ToList();
-    }
-
-    //public void PurchaseBook(int userId, int bookId)
-    //{
-    //    var book = _context.Books.SingleOrDefault(b => b.Id == bookId);
-    //    if (book == null)
-    //    {
-    //        throw new Exception("Book not found");
-    //    }
-
-    //    book.PurchaseCount++;
-    //    _context.Books.Update(book);
-    //    _context.SaveChanges();
-
-    //    var purchase = new Purchase
-    //    {
-    //        UserId = userId,
-    //        BookId = bookId,
-    //        PurchaseDate = DateTime.Now
-    //    };
-    //    _context.Purchases.Add(purchase);
-    //    _context.SaveChanges();
-    //}
 }

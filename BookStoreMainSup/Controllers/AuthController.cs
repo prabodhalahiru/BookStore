@@ -98,10 +98,18 @@ namespace BookStoreMainSup.Controllers
                     return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
                 }
 
+                if (!user.IsActive)
+                {
+                    return Unauthorized(new { message = "Your account is temporarily deactivated. Please contact the admin." });
+                }
+
                 if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 {
                     return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
                 }
+
+                user.IsLoggedIn = true;
+                await _authService.UpdateUserAsync(user);
 
                 var token = _authService.GenerateJwtToken(user);
 
@@ -114,9 +122,12 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+
+
+
         [HttpPost("logout")]
         [Authorize]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
             try
             {
@@ -124,118 +135,173 @@ namespace BookStoreMainSup.Controllers
                 if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
                     var token = authHeader.Substring("Bearer ".Length).Trim();
-                    _tokenRevocationService.RevokeToken(token);
-                    return Ok(new { message = "User logged out successfully" });
+                    _logger.LogInformation($"Attempting to log out user with token: {token}");
+
+                    // Log the token claims for debugging
+                    _authService.LogTokenClaims(token);
+
+                    // Get the user by token
+                    var user = await _authService.GetUserByTokenAsync(token);
+                    if (user != null)
+                    {
+                        _logger.LogInformation($"User found: {user.Username}. Updating IsLoggedIn status to false.");
+
+                        // Update the user's IsLoggedIn status
+                        user.IsLoggedIn = false;
+                        await _authService.UpdateUserAsync(user);
+
+                        // Revoke the token
+                        _tokenRevocationService.RevokeToken(token);
+
+                        return Ok(new { message = "User logged out successfully" });
+                    }
+
+                    _logger.LogWarning("Invalid token or user not found");
+                    return BadRequest(new { message = "Invalid token or user not found" });
                 }
 
+                _logger.LogWarning("User not logged in");
                 return BadRequest(new { message = "User not logged in" });
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 _logger.LogError(ex, "Error occurred in Logout method.");
                 return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in Logout method.");
+                return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
+            }
         }
 
-        [HttpPut("update/{username}")]
+        [HttpPut("update-details")]
         [Authorize]
-        public async Task<IActionResult> UpdateUser([FromQuery] string username, [FromBody] UserDto request)
+        public async Task<IActionResult> UpdateUserDetails([FromBody] UpdateUserDto request)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(username))
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+                if (!string.IsNullOrEmpty(request.Username) && await _authService.UserExistsByUsername(request.Username))
                 {
-                    return BadRequest(new { message = "The username query parameter is required." });
+                    return BadRequest(new { message = ErrorMessages.UsernameExists });
                 }
 
-                var user = await _authService.GetUserByUsernameAsync(username);
-                if (user == null)
+                if (!string.IsNullOrEmpty(request.Email) && await _authService.UserExistsByEmail(request.Email))
                 {
-                    return NotFound(new { message = "User not found" });
+                    return BadRequest(new { message = ErrorMessages.EmailExists });
                 }
 
-                if (!_authService.ValidateUserDto(request, out string validationMessage))
-                {
-                    _logger.LogWarning("Validation failed for update request: {ValidationMessage}", validationMessage);
-                    return BadRequest(new { message = validationMessage });
-                }
+                var user = await _authService.GetUserByIdAsync(userId);
 
-                bool isUpdated = false;
-                if (!string.IsNullOrEmpty(request.Username) && request.Username != user.Username)
+                if (!string.IsNullOrEmpty(request.Username))
                 {
                     user.Username = request.Username;
-                    isUpdated = true;
-                }
-                if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
-                {
-                    user.Email = request.Email;
-                    isUpdated = true;
-                }
-                if (!string.IsNullOrEmpty(request.Password))
-                {
-                    string newPasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-                    if (newPasswordHash != user.PasswordHash)
-                    {
-                        user.PasswordHash = newPasswordHash;
-                        isUpdated = true;
-                    }
                 }
 
-                if (!isUpdated)
+                if (!string.IsNullOrEmpty(request.Email))
                 {
-                    return Ok(new { message = "No updates were made as the details are the same" });
+                    if (!_authService.IsValidEmail(request.Email))
+                    {
+                        return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
+                    }
+                    user.Email = request.Email;
                 }
 
                 await _authService.UpdateUserAsync(user);
 
-                _logger.LogInformation("User updated successfully for username: {Username}", username);
-                return Ok(new { message = "User updated successfully" });
+                return Ok(new { message = "User details updated successfully" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in UpdateUser method.");
-                return StatusCode(500, new { message = $"Internal server error in UpdateUser method: {ex.Message}" });
+                _logger.LogError(ex, "Error occurred in UpdateUserDetails method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
             }
         }
 
-        [HttpGet("GetAllUsers")]
-        [Authorize]
-        public async Task<IActionResult> GetAllUsers()
-        {
-            try
-            {
-                var users = await _authService.GetAllUsersAsync();
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error occurred in GetAllUsers method.");
-                return StatusCode(500, new { message = $"Internal server error in GetAllUsers method: {ex.Message}" });
-            }
-        }
 
-        [HttpDelete("DeletUser/{id}")]
+        //[HttpPut("update-password")]
+        //[Authorize]
+        //public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
+        //{
+        //    try
+        //    {
+        //        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        //        var user = await _authService.GetUserByIdAsync(userId);
+
+        //        if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+        //        {
+        //            return BadRequest(new { message = "Old password is incorrect" });
+        //        }
+
+        //        if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
+        //        {
+        //            return BadRequest(new { message = validationMessage });
+        //        }
+
+        //        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        //        await _authService.UpdateUserAsync(user);
+
+        //        // Revoke the user's token
+        //        var authHeader = Request.Headers["Authorization"].ToString();
+        //        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        //        {
+        //            var token = authHeader.Substring("Bearer ".Length).Trim();
+        //            _tokenRevocationService.RevokeToken(token);
+        //        }
+
+        //        return Ok(new { message = "Password changed, please login again" });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error occurred in UpdatePassword method.");
+        //        return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
+        //    }
+        //}
+
+        [HttpPut("update-password")]
         [Authorize]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
         {
             try
             {
-                var user = await _authService.GetUserByIdAsync(id);
-                if (user == null)
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var user = await _authService.GetUserByIdAsync(userId);
+
+                if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 {
-                    return NotFound(new { message = "User not found" });
+                    return BadRequest(new { message = "Old password is incorrect" });
                 }
 
-                await _authService.DeleteUserAsync(id);
+                if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
+                {
+                    return BadRequest(new { message = validationMessage });
+                }
 
-                return Ok(new { message = "User deleted successfully" });
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                user.IsLoggedIn = false; // Set IsLoggedIn to false
+
+                await _authService.UpdateUserAsync(user);
+
+                // Revoke the user's token
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var token = authHeader.Substring("Bearer ".Length).Trim();
+                    _tokenRevocationService.RevokeToken(token);
+                }
+
+                return Ok(new { message = "Password changed, please login again" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred in DeleteUser method.");
-                return StatusCode(500, new { message = $"Internal server error in DeleteUser method: {ex.Message}" });
+                _logger.LogError(ex, "Error occurred in UpdatePassword method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
             }
         }
+
+
 
     }
 }
