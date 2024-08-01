@@ -182,30 +182,40 @@ namespace BookStoreMainSup.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-
-                if (!string.IsNullOrEmpty(request.Username) && await _authService.UserExistsByUsername(request.Username))
-                {
-                    return BadRequest(new { message = ErrorMessages.UsernameExists });
-                }
-
-                if (!string.IsNullOrEmpty(request.Email) && await _authService.UserExistsByEmail(request.Email))
-                {
-                    return BadRequest(new { message = ErrorMessages.EmailExists });
-                }
-
                 var user = await _authService.GetUserByIdAsync(userId);
 
-                if (!string.IsNullOrEmpty(request.Username))
+                if (request.Username == null && request.Email == null)
                 {
+                    return BadRequest(new { message = "At least one field (username or email) must be provided." });
+                }
+
+                if (request.Username != null)
+                {
+                    if (string.IsNullOrWhiteSpace(request.Username) || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
+                    {
+                        return BadRequest(new { message = "Username must be between 3 and 20 characters and contain only letters and numbers." });
+                    }
+
+                    if (await _authService.UserExistsByUsername(request.Username))
+                    {
+                        return BadRequest(new { message = ErrorMessages.UsernameExists });
+                    }
+
                     user.Username = request.Username;
                 }
 
-                if (!string.IsNullOrEmpty(request.Email))
+                if (request.Email != null)
                 {
-                    if (!_authService.IsValidEmail(request.Email))
+                    if (string.IsNullOrWhiteSpace(request.Email) || !_authService.IsValidEmail(request.Email))
                     {
                         return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
                     }
+
+                    if (await _authService.UserExistsByEmail(request.Email))
+                    {
+                        return BadRequest(new { message = ErrorMessages.EmailExists });
+                    }
+
                     user.Email = request.Email;
                 }
 
@@ -219,6 +229,7 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
             }
         }
+
 
         [HttpPut("update-password")]
         [Authorize]
