@@ -182,28 +182,29 @@ namespace BookStoreMainSup.Controllers
             try
             {
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+                if (!string.IsNullOrEmpty(request.Username) && await _authService.UserExistsByUsername(request.Username))
+                {
+                    return BadRequest(new { message = ErrorMessages.UsernameExists });
+                }
+
+                if (!string.IsNullOrEmpty(request.Email) && await _authService.UserExistsByEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailExists });
+                }
+
                 var user = await _authService.GetUserByIdAsync(userId);
 
-                // Check if the username is provided and update it if it is unique
                 if (!string.IsNullOrEmpty(request.Username))
                 {
-                    if (await _authService.UserExistsByUsername(request.Username))
-                    {
-                        return BadRequest(new { message = ErrorMessages.UsernameExists });
-                    }
                     user.Username = request.Username;
                 }
 
-                // Check if the email is provided and update it if it is unique and valid
                 if (!string.IsNullOrEmpty(request.Email))
                 {
                     if (!_authService.IsValidEmail(request.Email))
                     {
                         return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
-                    }
-                    if (await _authService.UserExistsByEmail(request.Email))
-                    {
-                        return BadRequest(new { message = ErrorMessages.EmailExists });
                     }
                     user.Email = request.Email;
                 }
@@ -218,7 +219,6 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
             }
         }
-
 
         [HttpPut("update-password")]
         [Authorize]
