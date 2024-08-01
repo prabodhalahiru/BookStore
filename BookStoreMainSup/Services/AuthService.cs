@@ -16,19 +16,35 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using BookStoreMainSup.Controllers;
+using BookStoreMainSup.Services;
 
 public class AuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger; // Add logger dependency
+    private readonly ITokenRevocationService _tokenRevocationService;
 
-    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger, ITokenRevocationService tokenRevocationService)
     {
         _context = context;
         _configuration = configuration;
-        _logger = logger; // Initialize logger
+        _logger = logger;
+        _tokenRevocationService = tokenRevocationService;
     }
+
+    public async Task<List<string>> GetUserTokensAsync(int userId)
+    {
+        var tokens = await _context.UserTokens.Where(ut => ut.UserId == userId).Select(ut => ut.Token).ToListAsync();
+        return tokens;
+    }
+
+    public async Task AddTokenAsync(UserToken userToken)
+    {
+        _context.UserTokens.Add(userToken);
+        await _context.SaveChangesAsync();
+    }
+
 
     public async Task<bool> UserExistsByEmail(string email)
     {
@@ -109,15 +125,27 @@ public class AuthService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMonths(1),
+            Expires = DateTime.UtcNow.AddHours(1),
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        // Save the token in the database
+        var userToken = new UserToken
+        {
+            UserId = user.Id,
+            Token = tokenString,
+            ExpiryDate = tokenDescriptor.Expires.Value
+        };
+        AddTokenAsync(userToken).Wait();
+
+        return tokenString;
     }
+
 
 
 
@@ -269,6 +297,42 @@ public class AuthService
         {
             validationMessage = ErrorMessages.PasswordScpecialCha;
             return false;
+        }
+
+        return true;
+    }
+
+    public bool ValidateUserField(string field, string value, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (field == "Username")
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                validationMessage = ErrorMessages.RequiredFieldsIdentifier;
+                return false;
+            }
+
+            if (value.Length < 3 || value.Length > 20 || !Regex.IsMatch(value, @"^[a-zA-Z0-9]+$"))
+            {
+                validationMessage = ErrorMessages.InvalidUsernameFormat;
+                return false;
+            }
+        }
+        else if (field == "Email")
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                validationMessage = ErrorMessages.RequiredFieldsIdentifier;
+                return false;
+            }
+
+            if (!IsValidEmail(value))
+            {
+                validationMessage = ErrorMessages.InvalidEmailFormat;
+                return false;
+            }
         }
 
         return true;

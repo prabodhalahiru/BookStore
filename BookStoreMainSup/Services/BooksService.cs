@@ -5,13 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
-//public class BookUpdateResult
-//{
-//    public bool IsSuccess { get; set; }
-//    public Books Book { get; set; }
-//    public string ErrorMessage { get; set; }
-//}
-public class BooksService
+public class BooksService: IBooksService
 {
     private readonly ApplicationDbContext _context;
 
@@ -71,19 +65,27 @@ public class BooksService
             validationMessage = "Price must be greater than zero.";
             return false;
         }
-        if (book.isbn.ToString().Length <= 10)
+        if (!IsValidISBN(book.isbn))
         {
-            validationMessage = "The length of ISBN should be greater than 10.";
+            validationMessage = "The length of ISBN should be greater than or Equal to 10 and less than or equal to 13.";
             return false;
         }
-        if (book.isbn.ToString().Length >= 13)
-        {
-            validationMessage = "The length of ISBN should be less than 13.";
-            return false;
-        }
+
         if (!Regex.IsMatch(book.isbn.ToString(), @"^[0-9]+$"))
         {
             validationMessage = "ISBN should be a number.";
+            return false;
+        }
+
+        if (!IsValidTitle(book.Title))
+        {
+            validationMessage = "Title Should be less than or equal to 25 characters!";
+            return false;
+        }
+
+        if (!IsValidTitle(book.Author))
+        {
+            validationMessage = "Author Name Should be less than or equal to 25 characters!";
             return false;
         }
 
@@ -147,7 +149,7 @@ public class BooksService
     {
         if (!minPrice.HasValue || !maxPrice.HasValue || minPrice < 0 || maxPrice < 0)
         {
-            throw new ArgumentException("Price should have a positive value");
+            throw new ArgumentException("Price should be a valid value");
         }
 
         if (minPrice > maxPrice)

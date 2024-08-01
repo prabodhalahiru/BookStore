@@ -181,30 +181,41 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
+                // Ensure at least one field is provided
+                if (string.IsNullOrEmpty(request.Username) && string.IsNullOrEmpty(request.Email))
+                {
+                    return BadRequest(new { message = "At least one field (username or email) must be provided." });
+                }
+
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-
-                if (!string.IsNullOrEmpty(request.Username) && await _authService.UserExistsByUsername(request.Username))
-                {
-                    return BadRequest(new { message = ErrorMessages.UsernameExists });
-                }
-
-                if (!string.IsNullOrEmpty(request.Email) && await _authService.UserExistsByEmail(request.Email))
-                {
-                    return BadRequest(new { message = ErrorMessages.EmailExists });
-                }
-
                 var user = await _authService.GetUserByIdAsync(userId);
 
+                // Validate and update username if provided
                 if (!string.IsNullOrEmpty(request.Username))
                 {
+                    if (!_authService.ValidateUserField("Username", request.Username, out string validationMessage))
+                    {
+                        return BadRequest(new { message = validationMessage });
+                    }
+
+                    if (await _authService.UserExistsByUsername(request.Username))
+                    {
+                        return BadRequest(new { message = ErrorMessages.UsernameExists });
+                    }
                     user.Username = request.Username;
                 }
 
+                // Validate and update email if provided
                 if (!string.IsNullOrEmpty(request.Email))
                 {
-                    if (!_authService.IsValidEmail(request.Email))
+                    if (!_authService.ValidateUserField("Email", request.Email, out string validationMessage))
                     {
-                        return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
+                        return BadRequest(new { message = validationMessage });
+                    }
+
+                    if (await _authService.UserExistsByEmail(request.Email))
+                    {
+                        return BadRequest(new { message = ErrorMessages.EmailExists });
                     }
                     user.Email = request.Email;
                 }
@@ -221,44 +232,8 @@ namespace BookStoreMainSup.Controllers
         }
 
 
-        //[HttpPut("update-password")]
-        //[Authorize]
-        //public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
-        //{
-        //    try
-        //    {
-        //        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        //        var user = await _authService.GetUserByIdAsync(userId);
 
-        //        if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
-        //        {
-        //            return BadRequest(new { message = "Old password is incorrect" });
-        //        }
 
-        //        if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
-        //        {
-        //            return BadRequest(new { message = validationMessage });
-        //        }
-
-        //        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        //        await _authService.UpdateUserAsync(user);
-
-        //        // Revoke the user's token
-        //        var authHeader = Request.Headers["Authorization"].ToString();
-        //        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            var token = authHeader.Substring("Bearer ".Length).Trim();
-        //            _tokenRevocationService.RevokeToken(token);
-        //        }
-
-        //        return Ok(new { message = "Password changed, please login again" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error occurred in UpdatePassword method.");
-        //        return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
-        //    }
-        //}
 
         [HttpPut("update-password")]
         [Authorize]

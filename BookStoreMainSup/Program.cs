@@ -5,6 +5,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using BookStoreMainSup.Data;
 using BookStoreMainSup.Services;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 
 // Register the TokenRevocationService
 builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>();
-
+builder.Services.AddScoped<IBooksService, BooksService>();
 // Register the AuthService
 builder.Services.AddScoped<AuthService>();
 
@@ -82,6 +83,12 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// Configure ApiBehaviorOptions
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
 
 // Register controllers
 builder.Services.AddControllers();
