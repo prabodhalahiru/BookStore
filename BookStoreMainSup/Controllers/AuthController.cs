@@ -220,46 +220,6 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
-
-        //[HttpPut("update-password")]
-        //[Authorize]
-        //public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
-        //{
-        //    try
-        //    {
-        //        var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-        //        var user = await _authService.GetUserByIdAsync(userId);
-
-        //        if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
-        //        {
-        //            return BadRequest(new { message = "Old password is incorrect" });
-        //        }
-
-        //        if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
-        //        {
-        //            return BadRequest(new { message = validationMessage });
-        //        }
-
-        //        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
-        //        await _authService.UpdateUserAsync(user);
-
-        //        // Revoke the user's token
-        //        var authHeader = Request.Headers["Authorization"].ToString();
-        //        if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        //        {
-        //            var token = authHeader.Substring("Bearer ".Length).Trim();
-        //            _tokenRevocationService.RevokeToken(token);
-        //        }
-
-        //        return Ok(new { message = "Password changed, please login again" });
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Error occurred in UpdatePassword method.");
-        //        return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
-        //    }
-        //}
-
         [HttpPut("update-password")]
         [Authorize]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)

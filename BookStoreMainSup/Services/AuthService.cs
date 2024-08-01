@@ -16,19 +16,35 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Logging;
 using BookStoreMainSup.Controllers;
+using BookStoreMainSup.Services;
 
 public class AuthService
 {
     private readonly ApplicationDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger; // Add logger dependency
+    private readonly ITokenRevocationService _tokenRevocationService;
 
-    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger)
+    public AuthService(ApplicationDbContext context, IConfiguration configuration, ILogger<AuthService> logger, ITokenRevocationService tokenRevocationService)
     {
         _context = context;
         _configuration = configuration;
-        _logger = logger; // Initialize logger
+        _logger = logger;
+        _tokenRevocationService = tokenRevocationService;
     }
+
+    public async Task<List<string>> GetUserTokensAsync(int userId)
+    {
+        var tokens = await _context.UserTokens.Where(ut => ut.UserId == userId).Select(ut => ut.Token).ToListAsync();
+        return tokens;
+    }
+
+    public async Task AddTokenAsync(UserToken userToken)
+    {
+        _context.UserTokens.Add(userToken);
+        await _context.SaveChangesAsync();
+    }
+
 
     public async Task<bool> UserExistsByEmail(string email)
     {
@@ -116,8 +132,20 @@ public class AuthService
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        // Save the token in the database
+        var userToken = new UserToken
+        {
+            UserId = user.Id,
+            Token = tokenString,
+            ExpiryDate = tokenDescriptor.Expires.Value
+        };
+        AddTokenAsync(userToken).Wait();
+
+        return tokenString;
     }
+
 
 
 

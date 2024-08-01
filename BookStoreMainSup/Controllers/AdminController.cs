@@ -16,12 +16,14 @@ namespace BookStoreMainSup.Controllers
         private readonly AdminService _adminService;
         private readonly AuthService _authService;
         private readonly ILogger<AdminController> _logger;
+        private readonly ITokenRevocationService _tokenRevocationService;
 
-        public AdminController(AdminService adminService, AuthService authService, ILogger<AdminController> logger)
+        public AdminController(AdminService adminService, AuthService authService, ILogger<AdminController> logger, ITokenRevocationService tokenRevocationService)
         {
             _adminService = adminService;
             _authService = authService;
             _logger = logger;
+            _tokenRevocationService = tokenRevocationService;
         }
 
         [HttpPost("register")]
@@ -202,6 +204,22 @@ namespace BookStoreMainSup.Controllers
                 await _authService.UpdateUserAsync(user);
 
                 string status = request.IsActive ? "activated" : "deactivated";
+
+                // If the user is being deactivated, log them out and revoke their token
+                if (!request.IsActive && user.IsLoggedIn)
+                {
+                    // Get the token from the user's claims
+                    var userTokens = await _authService.GetUserTokensAsync(user.Id);
+                    foreach (var token in userTokens)
+                    {
+                        _tokenRevocationService.RevokeToken(token);
+                    }
+
+                    // Update user's IsLoggedIn status
+                    user.IsLoggedIn = false;
+                    await _authService.UpdateUserAsync(user);
+                }
+
                 return Ok(new { message = $"User successfully {status}." });
             }
             catch (Exception ex)
@@ -210,6 +228,7 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in DeactivateUser method: {ex.Message}" });
             }
         }
+
 
 
 
