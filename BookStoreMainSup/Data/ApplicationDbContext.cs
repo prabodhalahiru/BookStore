@@ -15,5 +15,7 @@ namespace BookStoreMainSup.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Purchase> Purchases { get; set; }
 
+        public DbSet<UserToken> UserTokens { get; set; }
+
     }
 }

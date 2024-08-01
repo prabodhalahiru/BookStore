@@ -149,7 +149,7 @@ public class BooksService: IBooksService
     {
         if (!minPrice.HasValue || !maxPrice.HasValue || minPrice < 0 || maxPrice < 0)
         {
-            throw new ArgumentException("Price should have a positive value");
+            throw new ArgumentException("Price should be a valid value");
         }
 
         if (minPrice > maxPrice)
