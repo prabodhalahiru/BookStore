@@ -15,6 +15,6 @@ namespace BookStoreMainSup.Helper
         public const string priceCheck = "Price should be greater than 0";
         public const string isbnCheck = "You should enter ISBN Number";
         public const string titleCheck = "Title Should be less than or equal to 25 characters!";
-        public const string authorCheck = "Arthor Name Should be less than or equal to 25 characters!";
+        public const string authorCheck = "Author Name Should be less than or equal to 25 characters!";
     }
 }
