@@ -58,7 +58,6 @@ Open <code>appsettings.json</code> and update the DefaultConnection string with 
 <p style="font-family: 'Courier New', Courier, monospace;">
 <pre>
 <code>
-dotnet ef migrations add InitialCreate
 dotnet ef database update
 </code>
 </pre>
