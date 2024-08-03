@@ -31,29 +31,13 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                if (!_authService.ValidateUserDto(request, out string validationMessage))
+                var validationResult = await ValidateRegisterAdminAsync(request);
+                if (validationResult != null)
                 {
-                    return BadRequest(new { message = validationMessage });
+                    return validationResult;
                 }
 
-                if (await _authService.UserExistsByEmail(request.Email) || await _authService.UserExistsByUsername(request.Username))
-                {
-                    return BadRequest(new { message = "Email or Username already exists" });
-                }
-
-                if (await _adminService.AdminExists())
-                {
-                    return BadRequest(new { message = "An admin account already exists" });
-                }
-
-                var admin = new User
-                {
-                    Username = request.Username,
-                    Email = request.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                    IsAdmin = true
-                };
-
+                var admin = CreateAdminUser(request);
                 await _adminService.AddAdminAsync(admin);
 
                 return Created("", new { message = "Admin registered successfully" });
@@ -65,29 +49,49 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        private async Task<IActionResult> ValidateRegisterAdminAsync(UserDto request)
+        {
+            if (!_authService.ValidateUserDto(request, out string validationMessage))
+            {
+                return BadRequest(new { message = validationMessage });
+            }
+
+            if (await _authService.UserExistsByEmail(request.Email) || await _authService.UserExistsByUsername(request.Username))
+            {
+                return BadRequest(new { message = "Email or Username already exists" });
+            }
+
+            if (await _adminService.AdminExists())
+            {
+                return BadRequest(new { message = "An admin account already exists" });
+            }
+
+            return null;
+        }
+
+        private User CreateAdminUser(UserDto request)
+        {
+            return new User
+            {
+                Username = request.Username,
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+                IsAdmin = true
+            };
+        }
+
+
         [HttpGet("loggedinusers")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetLoggedInUsers()
         {
             try
             {
-                var loggedInUsers = await _adminService.GetLoggedInUsersAsync();
-                var books = await _adminService.GetBooksCountByUserAsync();
-
-                if (loggedInUsers == null || loggedInUsers.Count == 0)
+                var userResponses = await GetLoggedInUserResponsesAsync();
+                if (userResponses == null || userResponses.Count == 0)
                 {
                     return NotFound(new { message = "Currently no logged in users" });
                 }
-
-                var userResponses = loggedInUsers.Select(user => new UserResponseDto
-                {
-                    Id = user.Id,
-                    Username = user.Username,
-                    Email = user.Email,
-                    IsLoggedIn = user.IsLoggedIn,
-                    IsAdmin = user.IsAdmin,
-                    BooksCreated = books.ContainsKey(user.Id) ? books[user.Id] : 0
-                }).ToList();
 
                 return Ok(userResponses);
             }
@@ -97,6 +101,23 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in GetLoggedInUsers method: {ex.Message}" });
             }
         }
+
+        private async Task<List<UserResponseDto>> GetLoggedInUserResponsesAsync()
+        {
+            var loggedInUsers = await _adminService.GetLoggedInUsersAsync();
+            var books = await _adminService.GetBooksCountByUserAsync();
+
+            return loggedInUsers.Select(user => new UserResponseDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                IsLoggedIn = user.IsLoggedIn,
+                IsAdmin = user.IsAdmin,
+                BooksCreated = books.ContainsKey(user.Id) ? books[user.Id] : 0
+            }).ToList();
+        }
+
 
 
 
@@ -127,10 +148,10 @@ namespace BookStoreMainSup.Controllers
 
             try
             {
-                var user = await _authService.GetUserByIdAsync(parsedUserId);
-                if (user == null)
+                var validationResult = await ValidateGetBooksByUserAsync(parsedUserId);
+                if (validationResult != null)
                 {
-                    return NotFound(new { message = "No users matched the id" });
+                    return validationResult;
                 }
 
                 var books = await _adminService.GetBooksByUserAsync(parsedUserId);
@@ -147,6 +168,18 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in GetBooksByUser method: {ex.Message}" });
             }
         }
+
+        private async Task<IActionResult> ValidateGetBooksByUserAsync(int userId)
+        {
+            var user = await _authService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "No users matched the id" });
+            }
+
+            return null;
+        }
+
 
 
         [HttpGet("registered-users")]
@@ -194,33 +227,13 @@ namespace BookStoreMainSup.Controllers
 
             try
             {
-                var user = await _authService.GetUserByIdAsync(parsedUserId);
-                if (user == null)
+                var result = await DeactivateUserAsync(parsedUserId, request.IsActive);
+                if (!result.Success)
                 {
-                    return NotFound(new { message = "No users matched the id" });
+                    return result.Result;
                 }
 
-                user.IsActive = request.IsActive;
-                await _authService.UpdateUserAsync(user);
-
-                string status = request.IsActive ? "activated" : "deactivated";
-
-                // If the user is being deactivated, log them out and revoke their token
-                if (!request.IsActive && user.IsLoggedIn)
-                {
-                    // Get the token from the user's claims
-                    var userTokens = await _authService.GetUserTokensAsync(user.Id);
-                    foreach (var token in userTokens)
-                    {
-                        _tokenRevocationService.RevokeToken(token);
-                    }
-
-                    // Update user's IsLoggedIn status
-                    user.IsLoggedIn = false;
-                    await _authService.UpdateUserAsync(user);
-                }
-
-                return Ok(new { message = $"User successfully {status}." });
+                return Ok(new { message = result.Message });
             }
             catch (Exception ex)
             {
@@ -229,11 +242,32 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        private async Task<(bool Success, IActionResult Result, string Message)> DeactivateUserAsync(int userId, bool isActive)
+        {
+            var user = await _authService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, NotFound(new { message = "No users matched the id" }), null);
+            }
 
+            user.IsActive = isActive;
+            await _authService.UpdateUserAsync(user);
 
+            if (!isActive && user.IsLoggedIn)
+            {
+                var userTokens = await _authService.GetUserTokensAsync(user.Id);
+                foreach (var token in userTokens)
+                {
+                    _tokenRevocationService.RevokeToken(token);
+                }
 
+                user.IsLoggedIn = false;
+                await _authService.UpdateUserAsync(user);
+            }
 
-
+            string status = isActive ? "activated" : "deactivated";
+            return (true, null, $"User successfully {status}.");
+        }
 
 
     }

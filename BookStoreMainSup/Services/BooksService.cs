@@ -4,14 +4,17 @@ using BookStoreMainSup.Helper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 
 public class BooksService: IBooksService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<BooksService> _logger;
 
-    public BooksService(ApplicationDbContext db)
+    public BooksService(ApplicationDbContext db, ILogger<BooksService> logger)
     {
         _context = db;
+        _logger = logger;
     }
 
     public async Task<List<Books>> GetBooksAsync()
@@ -47,9 +50,22 @@ public class BooksService: IBooksService
 
     public async Task AddBookAsync(Books book)
     {
+        await AddBookToContextAsync(book);
+        await LogBookCreationAsync(book);
+    }
+
+    private async Task AddBookToContextAsync(Books book)
+    {
         _context.Books.Add(book);
         await _context.SaveChangesAsync();
     }
+
+    private async Task LogBookCreationAsync(Books book)
+    {
+        await Task.CompletedTask;
+        _logger.LogInformation($"Book '{book.Title}' by '{book.Author}' added successfully.");
+    }
+
 
     public bool ValidateBook(Books book, out string validationMessage)
     {
@@ -122,6 +138,8 @@ public class BooksService: IBooksService
 
         return await filteredBooksQuery.ToListAsync();
     }
+
+
 
     public async Task<List<Books>> AdvancedSearchAsync(string? title, string? author, string? isbn)
     {
@@ -253,6 +271,7 @@ public class BooksService: IBooksService
 
         return new UpdateMessages { IsSuccess = true, Book = book };
     }
+
 
     public bool IsValidIsbn(long isbn)
     {

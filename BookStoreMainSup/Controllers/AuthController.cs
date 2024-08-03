@@ -38,33 +38,13 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                if (!_authService.ValidateUserDto(request, out string validationMessage))
+                var validationResult = await ValidateRegisterAsync(request);
+                if (validationResult != null)
                 {
-                    return BadRequest(new { message = validationMessage });
+                    return validationResult;
                 }
 
-                if (await _authService.UserExistsByEmail(request.Email) && await _authService.UserExistsByUsername(request.Username))
-                {
-                    return BadRequest(new { message = ErrorMessages.EmailAndUsernameExists });
-                }
-
-                if (await _authService.UserExistsByEmail(request.Email))
-                {
-                    return BadRequest(new { message = ErrorMessages.EmailExists });
-                }
-
-                if (await _authService.UserExistsByUsername(request.Username))
-                {
-                    return BadRequest(new { message = ErrorMessages.UsernameExists });
-                }
-
-                var user = new User
-                {
-                    Username = request.Username,
-                    Email = request.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
-                };
-
+                var user = CreateUser(request);
                 await _authService.AddUserAsync(user);
 
                 return Created("", new { message = "User registered successfully" });
@@ -76,38 +56,49 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        private async Task<IActionResult> ValidateRegisterAsync(UserDto request)
+        {
+            if (!_authService.ValidateUserDto(request, out string validationMessage))
+            {
+                return BadRequest(new { message = validationMessage });
+            }
+
+            if (await _authService.UserExistsByEmail(request.Email))
+            {
+                return BadRequest(new { message = ErrorMessages.EmailExists });
+            }
+
+            if (await _authService.UserExistsByUsername(request.Username))
+            {
+                return BadRequest(new { message = ErrorMessages.UsernameExists });
+            }
+
+            return null;
+        }
+
+        private User CreateUser(UserDto request)
+        {
+            return new User
+            {
+                Username = request.Username,
+                Email = request.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
+            };
+        }
+
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDto request)
         {
             try
             {
-                if (string.IsNullOrEmpty(request.Password))
+                var validationResult = await ValidateLoginAsync(request);
+                if (validationResult != null)
                 {
-                    return BadRequest(new { message = ErrorMessages.RequiredFieldsPassword });
-                }
-
-                if (string.IsNullOrEmpty(request.Identifier))
-                {
-                    return BadRequest(new { message = ErrorMessages.RequiredFieldsIdentifier });
+                    return validationResult;
                 }
 
                 var user = await _authService.GetUserByIdentifierAsync(request.Identifier);
-
-                if (user == null)
-                {
-                    return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
-                }
-
-                if (!user.IsActive)
-                {
-                    return Unauthorized(new { message = "Your account is temporarily deactivated. Please contact the admin." });
-                }
-
-                if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-                {
-                    return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
-                }
-
                 user.IsLoggedIn = true;
                 await _authService.UpdateUserAsync(user);
 
@@ -122,6 +113,37 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        private async Task<IActionResult> ValidateLoginAsync(UserLoginDto request)
+        {
+            if (string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest(new { message = ErrorMessages.RequiredFieldsPassword });
+            }
+
+            if (string.IsNullOrEmpty(request.Identifier))
+            {
+                return BadRequest(new { message = ErrorMessages.RequiredFieldsIdentifier });
+            }
+
+            var user = await _authService.GetUserByIdentifierAsync(request.Identifier);
+
+            if (user == null)
+            {
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
+            }
+
+            if (!user.IsActive)
+            {
+                return Unauthorized(new { message = "Your account is temporarily deactivated. Please contact the admin." });
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
+            }
+
+            return null;
+        }
 
 
 
@@ -131,37 +153,13 @@ namespace BookStoreMainSup.Controllers
         {
             try
             {
-                var authHeader = Request.Headers["Authorization"].ToString();
-                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                var validationResult = await ValidateLogoutAsync();
+                if (validationResult != null)
                 {
-                    var token = authHeader.Substring("Bearer ".Length).Trim();
-                    _logger.LogInformation($"Attempting to log out user with token: {token}");
-
-                    // Log the token claims for debugging
-                    _authService.LogTokenClaims(token);
-
-                    // Get the user by token
-                    var user = await _authService.GetUserByTokenAsync(token);
-                    if (user != null)
-                    {
-                        _logger.LogInformation($"User found: {user.Username}. Updating IsLoggedIn status to false.");
-
-                        // Update the user's IsLoggedIn status
-                        user.IsLoggedIn = false;
-                        await _authService.UpdateUserAsync(user);
-
-                        // Revoke the token
-                        _tokenRevocationService.RevokeToken(token);
-
-                        return Ok(new { message = "User logged out successfully" });
-                    }
-
-                    _logger.LogWarning("Invalid token or user not found");
-                    return BadRequest(new { message = "Invalid token or user not found" });
+                    return validationResult;
                 }
 
-                _logger.LogWarning("User not logged in");
-                return BadRequest(new { message = "User not logged in" });
+                return Ok(new { message = "User logged out successfully" });
             }
             catch (InvalidOperationException ex)
             {
@@ -175,6 +173,40 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
+        private async Task<IActionResult> ValidateLogoutAsync()
+        {
+            var authHeader = Request.Headers["Authorization"].ToString();
+            if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                _logger.LogInformation($"Attempting to log out user with token: {token}");
+
+                var user = await _authService.GetUserByTokenAsync(token);
+                if (user != null)
+                {
+                    _logger.LogInformation($"User found: {user.Username}. Updating IsLoggedIn status to false.");
+
+                    user.IsLoggedIn = false;
+                    await _authService.UpdateUserAsync(user);
+
+                    _tokenRevocationService.RevokeToken(token);
+                }
+                else
+                {
+                    _logger.LogWarning("Invalid token or user not found");
+                    return BadRequest(new { message = "Invalid token or user not found" });
+                }
+            }
+            else
+            {
+                _logger.LogWarning("User not logged in");
+                return BadRequest(new { message = "User not logged in" });
+            }
+
+            return null;
+        }
+
+
         [HttpPut("update-details")]
         [Authorize]
         public async Task<IActionResult> UpdateUserDetails([FromBody] UpdateUserDto request)
@@ -184,39 +216,10 @@ namespace BookStoreMainSup.Controllers
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                 var user = await _authService.GetUserByIdAsync(userId);
 
-                if (request.Username == null && request.Email == null)
+                var validationResult = await ValidateUpdateUserDetailsAsync(request, user);
+                if (validationResult != null)
                 {
-                    return BadRequest(new { message = "At least one field (username or email) must be provided." });
-                }
-
-                if (request.Username != null)
-                {
-                    if (string.IsNullOrWhiteSpace(request.Username) || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
-                    {
-                        return BadRequest(new { message = "Username must be between 3 and 20 characters and contain only letters and numbers." });
-                    }
-
-                    if (await _authService.UserExistsByUsername(request.Username))
-                    {
-                        return BadRequest(new { message = ErrorMessages.UsernameExists });
-                    }
-
-                    user.Username = request.Username;
-                }
-
-                if (request.Email != null)
-                {
-                    if (string.IsNullOrWhiteSpace(request.Email) || !_authService.IsValidEmail(request.Email))
-                    {
-                        return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
-                    }
-
-                    if (await _authService.UserExistsByEmail(request.Email))
-                    {
-                        return BadRequest(new { message = ErrorMessages.EmailExists });
-                    }
-
-                    user.Email = request.Email;
+                    return validationResult;
                 }
 
                 await _authService.UpdateUserAsync(user);
@@ -229,6 +232,47 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
             }
         }
+
+        private async Task<IActionResult> ValidateUpdateUserDetailsAsync(UpdateUserDto request, User user)
+        {
+            if (request.Username == null && request.Email == null)
+            {
+                return BadRequest(new { message = "At least one field (username or email) must be provided." });
+            }
+
+            if (request.Username != null)
+            {
+                if (string.IsNullOrWhiteSpace(request.Username) || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
+                {
+                    return BadRequest(new { message = "Username must be between 3 and 20 characters and contain only letters and numbers." });
+                }
+
+                if (await _authService.UserExistsByUsername(request.Username))
+                {
+                    return BadRequest(new { message = ErrorMessages.UsernameExists });
+                }
+
+                user.Username = request.Username;
+            }
+
+            if (request.Email != null)
+            {
+                if (string.IsNullOrWhiteSpace(request.Email) || !_authService.IsValidEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
+                }
+
+                if (await _authService.UserExistsByEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailExists });
+                }
+
+                user.Email = request.Email;
+            }
+
+            return null;
+        }
+
 
 
         [HttpPut("update-password")]

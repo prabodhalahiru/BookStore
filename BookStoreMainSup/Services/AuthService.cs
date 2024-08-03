@@ -97,9 +97,28 @@ public class AuthService
 
     public async Task AddUserAsync(User user)
     {
+        await AddUserToContextAsync(user);
+        await SaveUserTokenAsync(user); // Extracted logic to a private method
+    }
+
+    private async Task AddUserToContextAsync(User user)
+    {
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
     }
+
+    private async Task SaveUserTokenAsync(User user)
+    {
+        var token = GenerateJwtToken(user);
+        var userToken = new UserToken
+        {
+            UserId = user.Id,
+            Token = token,
+            ExpiryDate = DateTime.UtcNow.AddHours(1)
+        };
+        await AddTokenAsync(userToken);
+    }
+
 
     public async Task<User> GetUserByIdentifierAsync(string identifier)
     {
@@ -110,6 +129,16 @@ public class AuthService
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
+        var tokenDescriptor = GetTokenDescriptor(user, key);
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        return tokenString;
+    }
+
+    private SecurityTokenDescriptor GetTokenDescriptor(User user, byte[] key)
+    {
         var claims = new List<Claim>
     {
         new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -122,7 +151,7 @@ public class AuthService
             claims.Add(new Claim(ClaimTypes.Role, "Admin"));
         }
 
-        var tokenDescriptor = new SecurityTokenDescriptor
+        return new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(1),
@@ -130,26 +159,28 @@ public class AuthService
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
-
-        var token = tokenHandler.CreateToken(tokenDescriptor);
-        var tokenString = tokenHandler.WriteToken(token);
-
-        // Save the token in the database
-        var userToken = new UserToken
-        {
-            UserId = user.Id,
-            Token = tokenString,
-            ExpiryDate = tokenDescriptor.Expires.Value
-        };
-        AddTokenAsync(userToken).Wait();
-
-        return tokenString;
     }
 
 
 
 
+
     public bool ValidateUserDto(UserDto request, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (!ValidateRequiredFields(request, out validationMessage) ||
+            !ValidateEmailFormat(request.Email, out validationMessage) ||
+            !ValidateUsernameFormat(request.Username, out validationMessage) ||
+            !ValidatePasswordFormat(request.Password, out validationMessage))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ValidateRequiredFields(UserDto request, out string validationMessage)
     {
         validationMessage = string.Empty;
 
@@ -159,43 +190,64 @@ public class AuthService
             return false;
         }
 
-        if (!IsValidEmail(request.Email))
+        return true;
+    }
+
+    private bool ValidateEmailFormat(string email, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (!IsValidEmail(email))
         {
             validationMessage = ErrorMessages.InvalidEmailFormat;
             return false;
         }
 
-        if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
+        return true;
+    }
+
+    private bool ValidateUsernameFormat(string username, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (username.Length < 3 || username.Length > 20 || !Regex.IsMatch(username, @"^[a-zA-Z0-9]+$"))
         {
             validationMessage = ErrorMessages.InvalidUsernameFormat;
             return false;
         }
 
-        if (request.Password.Length < 5)
+        return true;
+    }
+
+    private bool ValidatePasswordFormat(string password, out string validationMessage)
+    {
+        validationMessage = string.Empty;
+
+        if (password.Length < 5)
         {
             validationMessage = ErrorMessages.PasswordLength;
             return false;
         }
 
-        if (!Regex.IsMatch(request.Password, @"[a-z]"))
+        if (!Regex.IsMatch(password, @"[a-z]"))
         {
             validationMessage = ErrorMessages.PasswordLowerCha;
             return false;
         }
 
-        if (!Regex.IsMatch(request.Password, @"[A-Z]"))
+        if (!Regex.IsMatch(password, @"[A-Z]"))
         {
             validationMessage = ErrorMessages.PasswordUpperCha;
             return false;
         }
 
-        if (!Regex.IsMatch(request.Password, @"\d"))
+        if (!Regex.IsMatch(password, @"\d"))
         {
             validationMessage = ErrorMessages.PasswordNumb;
             return false;
         }
 
-        if (!Regex.IsMatch(request.Password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/]"))
+        if (!Regex.IsMatch(password, @"[~!@#$%^&*()\-_=+\[\]{}|;:,.<>?/]"))
         {
             validationMessage = ErrorMessages.PasswordScpecialCha;
             return false;
@@ -203,6 +255,7 @@ public class AuthService
 
         return true;
     }
+
 
     public bool IsValidEmail(string email)
     {
