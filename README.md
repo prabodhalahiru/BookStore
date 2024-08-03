@@ -1,95 +1,79 @@
-Book Store Application 🔖
+# Book Store Application 🔖
 
-Overview ⭕
+## Overview ⭕
 
+<p style="font-family: 'Courier New', Courier, monospace;">
 This bookstore application is built using ASP.NET Core 6 and Entity Framework Core. It follows the Model-View-Controller (MVC) architecture to provide a structured and maintainable codebase. The application includes user authentication and authorization using JWT (JSON Web Tokens) and allows users to perform CRUD (Create, Read, Update, Delete) operations on books.
+</p>
 
-Features ⭕
+## Features ⭕
 
-* User Registration and Login: Users can register and log in to the application. Passwords are securely hashed using BCrypt.
-JWT Authentication: Secure authentication using JSON Web Tokens (JWT).
+<p style="font-family: 'Courier New', Courier, monospace;">
+<strong>User Registration and Login:</strong> Users can register and log in to the application. Passwords are securely hashed using BCrypt. JWT Authentication: Secure authentication using JSON Web Tokens (JWT).
+</p>
 
-* CRUD Operations for Books:
-  
-   Create: Add new books to the store.
-  
-  Read: View details of all books or a specific book.
-  
-  Update: Edit details of existing books.
-  
-  Delete: Remove books from the store.
-  
-* Entity Framework Core: Used for database operations and migrations.
-  
-Technologies Used ⭕
+<p style="font-family: 'Courier New', Courier, monospace;">
+<strong>CRUD Operations for Books:</strong>
+<ul>
+    <li>Create: Add new books to the store.</li>
+    <li>Read: View details of all books or a specific book.</li>
+    <li>Update: Edit details of existing books.</li>
+    <li>Delete: Remove books from the store.</li>
+</ul>
+</p>
 
-ASP.NET Core 6: For building the web application and API.
+<p style="font-family: 'Courier New', Courier, monospace;">
+<strong>Entity Framework Core:</strong> Used for database operations and migrations.
+</p>
 
-Entity Framework Core: For database access and ORM (Object-Relational Mapping).
+## Technologies Used ⭕
+<p style="font-family: 'Courier New', Courier, monospace;">
+<ul>
+    <li><strong>ASP.NET Core 6:</strong> For building the web application and API.</li>
+    <li><strong>Entity Framework Core:</strong> For database access and ORM (Object-Relational Mapping).</li>
+    <li><strong>SQL Server:</strong> As the database provider.</li>
+    <li><strong>JWT (JSON Web Tokens):</strong> For secure authentication and authorization.</li>
+    <li><strong>BCrypt:</strong> For password hashing.</li>
+</ul>
+</p>
 
-SQL Server: As the database provider.
+## Setup Instructions ⭕
 
-JWT (JSON Web Tokens): For secure authentication and authorization.
-
-BCrypt: For password hashing.
-
-Setup Instructions ⭕
-
-Clone the Repository:
-
-bash
-
-Copy code
-
+### Clone the Repository:
+<p style="font-family: 'Courier New', Courier, monospace;">
+<pre>
+<code>
 git clone https://github.com/your-username/book-store-app.git
-
 cd book-store-app
+</code>
+</pre>
+</p>
 
-Update Connection String:
+### Update Connection String:
+<p style="font-family: 'Courier New', Courier, monospace;">
+Open <code>appsettings.json</code> and update the DefaultConnection string with your SQL Server connection details.
+</p>
 
-
-Open appsettings.json and update the DefaultConnection string with your SQL Server connection details.
-Run Migrations:
-
-bash
-
-Copy code
-
+### Run Migrations:
+<p style="font-family: 'Courier New', Courier, monospace;">
+<pre>
+<code>
 dotnet ef migrations add InitialCreate
-
 dotnet ef database update
+</code>
+</pre>
+</p>
 
-Run the Application:
-
-
-bash
-
-Copy code
-
+### Run the Application:
+<p style="font-family: 'Courier New', Courier, monospace;">
+<pre>
+<code>
 dotnet run
+</code>
+</pre>
+</p>
 
-Test Endpoints:
-
-
+### Test Endpoints:
+<p style="font-family: 'Courier New', Courier, monospace;">
 Use Postman or any other API testing tool to test the endpoints.
-
-Endpoints  ⭕
-
-User Authentication:
-
-
-POST /api/Auth/register: Register a new user.
-
-POST /api/Auth/login: Log in and get a JWT token.
-
-Books Management:
-
-GET /api/Books: Get all books.
-
-GET /api/Books/{id}: Get a specific book by ID.
-
-POST /api/Books: Add a new book (requires authentication).
-
-PUT /api/Books/{id}: Update an existing book (requires authentication).
-
-DELETE /api/Books/{id}: Delete a book (requires authentication).
+</p>
