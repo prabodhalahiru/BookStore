@@ -76,3 +76,10 @@ dotnet run
 <p style="font-family: 'Courier New', Courier, monospace;">
 Use Postman or any other API testing tool to test the endpoints.
 </p>
+
+### API Documentation:
+<p style="font-family: 'Courier New', Courier, monospace;">
+<pre>
+<span>Click <a href="https://docs.google.com/document/d/1COy6nJGWXbEoQVnid87DrPrlZGIxkg9mLjYzTP0-Or4/edit?usp=sharing">here</a> for documentation.</span>
+</pre>
+</p>
