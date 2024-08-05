@@ -52,21 +52,18 @@ namespace BookStoreMainSup.Controllers
             }
         }
 
-        // Get: api/Books/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<BooksDto>> GetBook(int id)
         {
             try
             {
-                var book = await _booksService.GetBookByIdAsync(id);
-
-                if (book == null)
+                var bookDto = await GetBookDtoByIdAsync(id);
+                if (bookDto == null)
                 {
                     _logger.LogWarning($"Book with ID {id} not found.");
                     return NotFound(new { message = $"Book with ID {id} not found." });
                 }
 
-                var bookDto = _booksService.MapBookToDto(book);
                 return Ok(bookDto);
             }
             catch (Exception ex)
@@ -75,6 +72,18 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
             }
         }
+
+        private async Task<BooksDto> GetBookDtoByIdAsync(int id)
+        {
+            var book = await _booksService.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                return null;
+            }
+
+            return _booksService.MapBookToDto(book);
+        }
+
 
         // PUT: API/Books/{id}
         [Authorize]
@@ -103,7 +112,6 @@ namespace BookStoreMainSup.Controllers
         }
 
 
-        // GET: api/Books/search?query=keyword
         [HttpGet("search")]
         [DisableRequestSizeLimit]
         public async Task<ActionResult<IEnumerable<Books>>> SearchBooks()
@@ -111,7 +119,7 @@ namespace BookStoreMainSup.Controllers
             try
             {
                 var query = HttpContext.Request.Query["query"].ToString();
-                var books = await _booksService.SearchBooksAsync(query);
+                var books = await SearchBooksAsync(query);
 
                 if (books.Count == 0)
                 {
@@ -130,6 +138,22 @@ namespace BookStoreMainSup.Controllers
                 return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
             }
         }
+
+        private async Task<List<Books>> SearchBooksAsync(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                return await _booksService.GetBooksAsync();
+            }
+
+            if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
+            {
+                throw new ArgumentException("Invalid keyword format.");
+            }
+
+            return await _booksService.SearchBooksAsync(query);
+        }
+
 
 
         // GET: api/books/advancedsearch
@@ -196,6 +220,28 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(ModelState);
             }
 
+            var validationResult = await ValidatePostBookAsync(book);
+            if (validationResult != null)
+            {
+                return (ActionResult<BookResponseDto>)validationResult; // Cast to ActionResult<BookResponseDto>
+            }
+
+            try
+            {
+                await _booksService.AddBookAsync(book);
+                var bookResponse = MapToBookResponseDto(book);
+
+                return StatusCode(201, bookResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while adding the book.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
+        }
+
+        private async Task<ActionResult<BookResponseDto>> ValidatePostBookAsync(Books book)
+        {
             if (!_booksService.ValidateBook(book, out string validationMessage))
             {
                 return BadRequest(new { message = validationMessage });
@@ -206,33 +252,22 @@ namespace BookStoreMainSup.Controllers
                 return BadRequest(new { message = "A book with this ISBN already exists." });
             }
 
-            // Get the user ID from the token
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-
-            // Set the CreatedBy property
-            book.CreatedBy = userId;
-
-            try
-            {
-                await _booksService.AddBookAsync(book);
-
-                var bookResponse = new BookResponseDto
-                {
-                    Id = book.Id,
-                    Title = book.Title,
-                    Author = book.Author,
-                    Price = book.Price,
-                    Isbn = book.isbn
-                };
-
-                return StatusCode(201, bookResponse);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "An error occurred while adding the book.");
-                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
-            }
+            return null;
         }
+
+        private BookResponseDto MapToBookResponseDto(Books book)
+        {
+            return new BookResponseDto
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                Price = book.Price,
+                Isbn = book.isbn
+            };
+        }
+
+
 
 
 

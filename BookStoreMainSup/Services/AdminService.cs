@@ -24,9 +24,15 @@ namespace BookStoreMainSup.Services
 
         public async Task AddAdminAsync(User user)
         {
+            await AddAdminToContextAsync(user);
+        }
+
+        private async Task AddAdminToContextAsync(User user)
+        {
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
         }
+
 
         public async Task<List<User>> GetLoggedInUsersAsync()
         {
