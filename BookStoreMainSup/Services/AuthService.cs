@@ -322,6 +322,12 @@ public class AuthService
     {
         validationMessage = string.Empty;
 
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            validationMessage = ErrorMessages.PasswordEmpty;
+            return false;
+        }
+
         if (password.Length < 5)
         {
             validationMessage = ErrorMessages.PasswordLength;
