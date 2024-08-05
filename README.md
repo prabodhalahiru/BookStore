@@ -20,6 +20,7 @@ This bookstore application is built using ASP.NET Core 6 and Entity Framework Co
     <li>Update: Edit details of existing books.</li>
     <li>Delete: Remove books from the store.</li>
 </ul>
+<strong>Search Books</strong>
 </p>
 
 <p style="font-family: 'Courier New', Courier, monospace;">
