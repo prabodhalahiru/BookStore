@@ -235,14 +235,22 @@ namespace BookStoreMainSup.Controllers
 
         private async Task<IActionResult> ValidateUpdateUserDetailsAsync(UpdateUserDto request, User user)
         {
-            if (request.Username == null && request.Email == null)
+            if (request.Username == null)
             {
-                return BadRequest(new { message = "At least one field (username or email) must be provided." });
+                return BadRequest(new { message = "Updating Username cannot be null" });
             }
-
+            if (request.Email == null)
+            {
+                return BadRequest(new { message = "Updating Email cannot be null" });
+            }
             if (request.Username != null)
             {
-                if (string.IsNullOrWhiteSpace(request.Username) || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
+                if (string.IsNullOrWhiteSpace(request.Username))
+                {
+                    return BadRequest(new { message = "Username cannot be empty" });
+                }
+
+                if (!Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
                 {
                     return BadRequest(new { message = "Username must be between 3 and 20 characters and contain only letters and numbers." });
                 }
@@ -258,6 +266,11 @@ namespace BookStoreMainSup.Controllers
             if (request.Email != null)
             {
                 if (string.IsNullOrWhiteSpace(request.Email) || !_authService.IsValidEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailEmpty });
+                }
+
+                if (!_authService.IsValidEmail(request.Email))
                 {
                     return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
                 }
@@ -284,9 +297,19 @@ namespace BookStoreMainSup.Controllers
                 var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
                 var user = await _authService.GetUserByIdAsync(userId);
 
+                if (string.IsNullOrWhiteSpace(request.OldPassword))
+                {
+                    return BadRequest(new { message = ErrorMessages.OldPasswordEmpty });
+                }
+
                 if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
                 {
                     return BadRequest(new { message = "Old password is incorrect" });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return BadRequest(new { message = ErrorMessages.NewPasswordEmpty });
                 }
 
                 if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))

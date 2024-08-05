@@ -20,5 +20,9 @@
         public const string PasswordNumb = "Password must contain at least one digit.";
         public const string PasswordUpperCha = "Password must contain at least one uppercase letter.";
         public const string PasswordLowerCha = "Password must contain at least one lowercase letter.";
+        public const string EmailEmpty = "Email cannot be empty";
+        public const string OldPasswordEmpty = "Old Password cannot be empty";
+        public const string NewPasswordEmpty = "New Password cannot be empty";
+        public const string PasswordEmpty = "Password cannot be empty";
     }
 }
