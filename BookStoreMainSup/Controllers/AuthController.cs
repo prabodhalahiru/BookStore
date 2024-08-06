@@ -235,14 +235,11 @@ namespace BookStoreMainSup.Controllers
 
         private async Task<IActionResult> ValidateUpdateUserDetailsAsync(UpdateUserDto request, User user)
         {
-            if (request.Username == null)
+            if (request.Username == null && request.Email == null)
             {
-                return BadRequest(new { message = "Updating Username cannot be null" });
+                return BadRequest(new { message = "Updating fields cannot be null" });
             }
-            if (request.Email == null)
-            {
-                return BadRequest(new { message = "Updating Email cannot be null" });
-            }
+
             if (request.Username != null)
             {
                 if (string.IsNullOrWhiteSpace(request.Username))
@@ -265,7 +262,7 @@ namespace BookStoreMainSup.Controllers
 
             if (request.Email != null)
             {
-                if (string.IsNullOrWhiteSpace(request.Email) || !_authService.IsValidEmail(request.Email))
+                if (string.IsNullOrWhiteSpace(request.Email))
                 {
                     return BadRequest(new { message = ErrorMessages.EmailEmpty });
                 }
