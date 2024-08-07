@@ -256,7 +256,6 @@ public class AuthService
         return true;
     }
 
-
     public bool IsValidEmail(string email)
     {
         try
@@ -274,13 +273,33 @@ public class AuthService
                 return false;
             }
 
-            string domainPart = email.Split('@')[1];
+            string[] emailParts = email.Split('@');
+            if (emailParts.Length != 2)
+            {
+                return false;
+            }
+
+            string domainPart = emailParts[1];
             if (domainPart.StartsWith("-") || domainPart.EndsWith("-") || domainPart.StartsWith(".") || domainPart.EndsWith(".") || domainPart.Contains(" "))
             {
                 return false;
             }
 
-            if (domainPart.Split('.').Last().Length < 2)
+            string[] domainParts = domainPart.Split('.');
+            if (domainParts.Length < 2)
+            {
+                return false;
+            }
+
+            foreach (var part in domainParts)
+            {
+                if (string.IsNullOrEmpty(part) || part.StartsWith("-") || part.EndsWith("-") || part.StartsWith(".") || part.EndsWith("."))
+                {
+                    return false;
+                }
+            }
+
+            if (domainParts.Last().Length < 2)
             {
                 return false;
             }
@@ -299,6 +318,7 @@ public class AuthService
             return false;
         }
     }
+
 
     public void LogTokenClaims(string token)
     {
