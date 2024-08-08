@@ -6,7 +6,11 @@ using BookStoreMainSup.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BookStoreMainSup.Resources;
 using System.Text.RegularExpressions;
+using System;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -14,274 +18,287 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
+       // private readonly ApplicationDbContext _db;
+        private readonly ILogger<BooksController> _logger;
+        private readonly IBooksService _booksService;
 
-        public BooksController(ApplicationDbContext db)
+        public BooksController(ILogger<BooksController> logger, IBooksService booksService)
         {
-            _db = db;
+           // _db = db;
+            _logger = logger;
+            _booksService = booksService;
         }
 
-        //Get: api/Books
+        // Get: api/Books
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Books>>> GetBooks()
         {
-            return await _db.Books.ToListAsync();
+            try
+            {
+                var books = await _booksService.GetBooksAsync();
+
+                if (books == null || books.Count == 0)
+                {
+                    _logger.LogWarning("No books available in the database.");
+                    return NotFound(new { message = "No books available in the database." });
+                }
+
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while getting the books.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
         }
 
-        //Get: api/Books/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<BooksDto>> GetBook(int id)
         {
-            var book = await _db.Books.FindAsync(id);
-
-            if (book == null)
+            try
             {
-                return NotFound();
+                var bookDto = await GetBookDtoByIdAsync(id);
+                if (bookDto == null)
+                {
+                    _logger.LogWarning($"Book with ID {id} not found.");
+                    return NotFound(new { message = $"Book with ID {id} not found." });
+                }
+
+                return Ok(bookDto);
             }
-
-            UpdateBookSellCount(book);
-            await _db.SaveChangesAsync();
-
-            double newPercentage = CalculateDiscount(book);
-            var booksDto = MapBooksdto(book, newPercentage);
-
-            return booksDto;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while getting the book.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
         }
 
-        //PUT: API/Books/{id}
+        private async Task<BooksDto> GetBookDtoByIdAsync(int id)
+        {
+            var book = await _booksService.GetBookByIdAsync(id);
+            if (book == null)
+            {
+                return null;
+            }
+
+            return _booksService.MapBookToDto(book);
+        }
+
+
+        // PUT: API/Books/{id}
         [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBook(int id, Books book)
         {
-
-            //if (!ModelState.IsValid)
-            //{
-            //    return BadRequest(ModelState);
-            //}
-
-            //if (!isValidISBN(book.isbn))
-            //{
-            //    return BadRequest("Invalid ISBN");
-            //}
-
-            //Setting the ID from the URL to book object
-            book.Id = id;
-
-            if (id != book.Id)
-            {
-                return BadRequest("The ID in the URL does not match the ID in the body.");
-            }
-
-            if (string.IsNullOrEmpty(book.isbn))
-            {
-                return BadRequest("You should enter ISBN Number");
-            }
-            
-            if(!(book.Price > 0))
-            {
-                return BadRequest("Price should be greater than 0");
-            }
-
-            //Retrieve excisting book data
-            var existingBook = await _db.Books.FindAsync(id);
-            if ((existingBook == null))
-            {
-                return NotFound();
-            }
-
-            //Checking whether sellcount has modified
-            if(existingBook.SellCount != book.SellCount)
-            {
-                return BadRequest("You cannot update the sellcount");
-            }
-
-            //Checking whether same isbn number is updating
-            var availableISBN = await _db.Books.AnyAsync(b => b.isbn == book.isbn && b.Id != id);
-            if (availableISBN)
-            {
-                return BadRequest("This ISBN is available. ISBN should be unique");
-            }
-
-            // Detach the existing entity to avoid tracking issues
-            _db.Entry(existingBook).State = EntityState.Detached;
-
-            _db.Entry(book).State = EntityState.Modified;
+            _logger.LogInformation($"Updating book with ID {id}");
 
             try
             {
-                await _db.SaveChangesAsync();
-            }
-            catch
-            {
-                if (!BookExists(id))
+                var result = await _booksService.UpdateBookAsync(id, book);
+                if (result.IsSuccess)
                 {
-                    return NotFound();
+                    return Ok(result.Book);
                 }
                 else
                 {
-                    throw;
+                    return BadRequest(new { message = result.ErrorMessage });
                 }
             }
-            return Ok(book);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while updating the book.");
+                return StatusCode(500, new { message = "Oops! Something went Wrong!" });
+            }
         }
 
-        // GET: api/Books/search?query=keyword
+
         [HttpGet("search")]
-        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks(string query)
+        [DisableRequestSizeLimit]
+        public async Task<ActionResult<IEnumerable<Books>>> SearchBooks()
+        {
+            try
+            {
+                var query = HttpContext.Request.Query["query"].ToString();
+                var books = await SearchBooksAsync(query);
+
+                if (books.Count == 0)
+                {
+                    return NotFound(new { message = "No records found" });
+                }
+
+                return Ok(books);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while searching for books.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
+        }
+
+        private async Task<List<Books>> SearchBooksAsync(string query)
         {
             if (string.IsNullOrWhiteSpace(query))
             {
-                return BadRequest("Query parameter is required.");
+                return await _booksService.GetBooksAsync();
             }
 
-            // Split the query into individual words and convert to lowercase
-            var words = query.Split(new char[] { ' ', '\u200E' }, StringSplitOptions.RemoveEmptyEntries)
-                             .Select(word => word.ToLower());
-
-            // Build the query to filter the books in the database
-            var filteredBooksQuery = _db.Books.AsQueryable();
-
-            foreach (var word in words)
+            if (!Regex.IsMatch(query, @"^[a-zA-Z0-9\s]+$"))
             {
-                // Filter the books based on the title, author, and ISBN using the LIKE operator
-                filteredBooksQuery = filteredBooksQuery.Where(b =>
-                    EF.Functions.Like(b.Title.ToLower(), $"%{word}%") ||
-                    EF.Functions.Like(b.Author.ToLower(), $"%{word}%") ||
-                    EF.Functions.Like(b.isbn.ToLower(), $"%{word}%"));
+                throw new ArgumentException("Invalid keyword format.");
             }
 
-            var filteredBooks = await filteredBooksQuery.ToListAsync();
-
-            return Ok(filteredBooks);
+            return await _booksService.SearchBooksAsync(query);
         }
 
 
-      
-        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000&order=sales
-        [HttpGet("sortbyrange")]
-        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double minPrice, double maxPrice, string order = "asc")
+
+        // GET: api/books/advancedsearch
+        [HttpGet("advancedsearch")]
+        [DisableRequestSizeLimit]
+        public async Task<ActionResult<IEnumerable<Books>>> AdvancedSearch([FromQuery] string? title, [FromQuery] string? author, [FromQuery] string? isbn)
         {
-            if (minPrice < 0 || maxPrice < 0)
-            {
-                return BadRequest("Price should have a positive value");
-            }
-            else if (minPrice > maxPrice) 
-            {
-                return BadRequest("maxPrice should be greater than minPrice");
-            }
-                
             try
             {
-                var allBooks = await _db.Books.ToListAsync();
+                var books = await _booksService.AdvancedSearchAsync(title, author, isbn);
 
-                //Filter books by price range
-                var booksInRange = allBooks.Where(b => b.Price >= minPrice && b.Price <= maxPrice).ToList();
+                if (books.Count == 0)
+                {
+                    return NotFound(new { message = "No records found." });
+                }
 
-                //Sort books by order
-                List<Books> sortedBooks;
-                if (order.ToLower() == "desc")
+                return Ok(books);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while performing an advanced search for books.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
+        }
+
+
+
+        // GET: api/books/sortbyrange?minPrice=1000&maxPrice=2000
+        [HttpGet("sortbyrange")]
+        public async Task<ActionResult<IEnumerable<Books>>> SortBooksByPriceRange(double? minPrice, double? maxPrice, string? order)
+        {
+            try
+            {
+                // Filter books by price range
+                var booksInRangeResult = await _booksService.GetBooksInRange(minPrice, maxPrice);
+
+                if (booksInRangeResult.Count == 0)
                 {
-                    sortedBooks = booksInRange.OrderByDescending(b => b.Price).ToList();
+                    return NotFound(new { message = "No Books available in Range" });
                 }
-                else if (order.ToLower() == "sales")
-                {
-                    sortedBooks = booksInRange.OrderByDescending(b => b.SellCount).ToList();
-                }
-                else
-                {
-                    sortedBooks = booksInRange.OrderBy(b => b.Price).ToList();
-                }
+
+                // Sort books by order
+                var sortedBooks = await _booksService.SortBooksByOrder(order, booksInRangeResult);
 
                 return Ok(sortedBooks);
             }
-            catch (Exception ex) 
-            { 
-                return StatusCode(500, ex.Message);
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
-            
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while sorting books by price range.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
         }
 
-
-
-        // POST: api/Books
         [Authorize]
         [HttpPost]
-        public async Task<ActionResult<Books>> PostBook(Books book)
+        public async Task<ActionResult<BookResponseDto>> PostBook([FromBody] Books book)
         {
-            _db.Books.Add(book);
-            await _db.SaveChangesAsync();
-
-            // Return 201 Created with the book object
-            return StatusCode(201, book);
-        }
-
-        private bool isValidISBN(string isbn)
-        {
-            return !string.IsNullOrEmpty(isbn);
-        }
-
-        private void UpdateBookSellCount(Books book)
-        {
-            book.SellCount = book.SellCount + 1;
-            _db.Entry(book).State = EntityState.Modified;
-        }
-
-        private bool BookExists(int id)
-        {
-            return _db.Books.Any(e => e.Id == id);
-        }
-
-        // Calculate the discount based on the number of books sold
-        private double CalculateDiscount(Books book)
-        {
-            double newPercentage = book.Discount + (5 * (book.SellCount - 3));
-
-            if (newPercentage < book.Discount)
+            if (!ModelState.IsValid)
             {
-                newPercentage = book.Discount;
-            }
-            else if (newPercentage > 50)
-            {
-                newPercentage = 50;
+                return BadRequest(ModelState);
             }
 
-            return newPercentage;
+            var validationResult = await ValidatePostBookAsync(book);
+            if (validationResult != null)
+            {
+                return (ActionResult<BookResponseDto>)validationResult; // Cast to ActionResult<BookResponseDto>
+            }
+
+            try
+            {
+                await _booksService.AddBookAsync(book);
+                var bookResponse = MapToBookResponseDto(book);
+
+                return StatusCode(201, bookResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while adding the book.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request" });
+            }
         }
 
-        // Map the Books object to BooksDto object
-        private BooksDto MapBooksdto(Books book, double newPercentage)
+        private async Task<ActionResult<BookResponseDto>> ValidatePostBookAsync(Books book)
         {
-            var part = book.Author.Split(" ");
-
-            var booksDto = new BooksDto
+            if (!_booksService.ValidateBook(book, out string validationMessage))
             {
+                return BadRequest(new { message = validationMessage });
+            }
+
+            if (await _booksService.BookExistsAsync(book.isbn.ToString()))
+            {
+                return BadRequest(new { message = "A book with this ISBN already exists." });
+            }
+
+            return null;
+        }
+
+        private BookResponseDto MapToBookResponseDto(Books book)
+        {
+            return new BookResponseDto
+            {
+                Id = book.Id,
                 Title = book.Title,
-                Fname = part.Length > 0 ? part[0] : "",
-                Lname = part.Length > 1 ? part[1] : "",
+                Author = book.Author,
                 Price = book.Price,
-                DiscountPrice = book.Price - (book.Price * newPercentage / 100),
-                discount = newPercentage,
-                SellCount = book.SellCount
+                Isbn = book.isbn
             };
-
-            return booksDto;
         }
-        //Delete Function
+
+
+
+
+
+        // DELETE: api/Books/{isbn}
         [Authorize]
         [HttpDelete("{isbn}")]
-        public async Task<IActionResult> DeleteBook(string isbn)
+        public async Task<IActionResult> DeleteBookByIsbn(string isbn)
         {
-            var book = await _db.Books.FirstOrDefaultAsync(b => b.isbn == isbn);
-
-            if (book == null)
+            // Validate that the input is a long numeric value
+            if (!long.TryParse(isbn, out long parsedIsbn) || parsedIsbn <= 0)
             {
-                return NotFound();
+                return BadRequest(new { message = "Invalid ISBN number. It must be a positive numeric value." });
             }
 
-            _db.Books.Remove(book);
-            await _db.SaveChangesAsync();
-
-            return Ok(book);
+            try
+            {
+                var result = await _booksService.DeleteBookByIsbnAsync(parsedIsbn);
+                if (result)
+                {
+                    return Ok(new { Message = $"Book with ISBN {parsedIsbn} was successfully deleted." });
+                }
+                else
+                {
+                    return BadRequest(new { message = $"Book with ISBN {parsedIsbn} not found." });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while deleting the book.");
+                return StatusCode(500, new { message = "The server encountered an error and could not complete your request." });
+            }
         }
 
     }

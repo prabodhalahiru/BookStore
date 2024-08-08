@@ -15,6 +15,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
 
 // Register the TokenRevocationService
 builder.Services.AddSingleton<ITokenRevocationService, TokenRevocationService>();
+builder.Services.AddScoped<IBooksService, BooksService>();
+// Register the AuthService
+builder.Services.AddScoped<AuthService>();
+
+// Register the AdminService
+builder.Services.AddScoped<AdminService>();
 
 // Configure JWT Authentication
 var key = Encoding.ASCII.GetBytes(builder.Configuration["Jwt:Key"]);
@@ -48,6 +54,29 @@ builder.Services.AddAuthentication(options =>
             }
 
             return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            var response = context.Response;
+            response.StatusCode = 401;
+            response.ContentType = "application/json";
+
+            var errorMessage = new { error = "User unauthorized" };
+            if (context.AuthenticateFailure != null)
+            {
+                if (context.AuthenticateFailure.GetType() == typeof(SecurityTokenExpiredException))
+                {
+                    errorMessage = new { error = "Token is expired" };
+                }
+                else if (context.AuthenticateFailure.Message == "This token has been revoked.")
+                {
+                    errorMessage = new { error = "Token has been revoked" };
+                }
+            }
+
+            var result = System.Text.Json.JsonSerializer.Serialize(errorMessage);
+            return response.WriteAsync(result);
         }
     };
 });

@@ -7,12 +7,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BookStoreMainSup.Services;
-using BookStoreMainSup.Controllers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Authorization;
 using System.Text.RegularExpressions;
 using BookStoreMainSup.Resources;
-
+using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
+using System;
 
 namespace BookStoreMainSup.Controllers
 {
@@ -20,133 +21,322 @@ namespace BookStoreMainSup.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        private readonly IConfiguration _configuration;
+        private readonly AuthService _authService;
+        private readonly ITokenRevocationService _tokenRevocationService;
+        private readonly ILogger<AuthController> _logger;
 
-        //Injecting the TokenRevocationService
-        public AuthController(ApplicationDbContext db, IConfiguration configuration, ITokenRevocationService tokenRevocationService)
+        public AuthController(AuthService authService, ITokenRevocationService tokenRevocationService, ILogger<AuthController> logger)
         {
-            _db = db;
-            _configuration = configuration;
+            _authService = authService;
             _tokenRevocationService = tokenRevocationService;
+            _logger = logger;
         }
 
-        private readonly ITokenRevocationService _tokenRevocationService;
-
-        ///Register a new user
         [HttpPost("register")]
+        [DisableRequestSizeLimit]
         public async Task<IActionResult> Register(UserDto request)
         {
-            if (string.IsNullOrEmpty(request.Username) || string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+            try
             {
-                return BadRequest(ErrorMessages.RequiredFields);
+                var validationResult = await ValidateRegisterAsync(request);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                var user = CreateUser(request);
+                await _authService.AddUserAsync(user);
+
+                return Created("", new { message = "User registered successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in Register method.");
+                return StatusCode(500, new { message = $"Internal server error in Register method: {ex.Message}" });
+            }
+        }
+
+        private async Task<IActionResult> ValidateRegisterAsync(UserDto request)
+        {
+            if (!_authService.ValidateUserDto(request, out string validationMessage))
+            {
+                return BadRequest(new { message = validationMessage });
             }
 
-            if (!Regex.IsMatch(request.Email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            if (await _authService.UserExistsByEmail(request.Email))
             {
-                return BadRequest(ErrorMessages.InvalidEmailFormat);
+                return BadRequest(new { message = ErrorMessages.EmailExists });
             }
 
-            if (request.Username.Length < 3 || request.Username.Length > 20 || !Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]+$"))
+            if (await _authService.UserExistsByUsername(request.Username))
             {
-                return BadRequest(ErrorMessages.InvalidUsernameFormat);
+                return BadRequest(new { message = ErrorMessages.UsernameExists });
             }
 
-            if (request.Password.Length < 5 || !Regex.IsMatch(request.Password, @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{5,}$"))
-            {
-                return BadRequest(ErrorMessages.InvalidPasswordFormat);
-            }
+            return null;
+        }
 
-            var emailExists = await _db.Users.AnyAsync(u => u.Email == request.Email);
-            var usernameExists = await _db.Users.AnyAsync(u => u.Username == request.Username);
-
-            if (emailExists && usernameExists)
-            {
-                return BadRequest(ErrorMessages.EmailAndUsernameExists);
-            }
-            if (emailExists)
-            {
-                return BadRequest(ErrorMessages.EmailExists);
-            }
-            if (usernameExists)
-            {
-                return BadRequest(ErrorMessages.UsernameExists);
-            }
-
-            var user = new User
+        private User CreateUser(UserDto request)
+        {
+            return new User
             {
                 Username = request.Username,
                 Email = request.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password)
             };
-
-            _db.Users.Add(user);
-            await _db.SaveChangesAsync();
-
-            return Ok(new { message = "User registered successfully" });
         }
 
-        //user login api
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(UserLoginDto request)
         {
-            if (string.IsNullOrEmpty(request.Identifier) || string.IsNullOrEmpty(request.Password))
+            try
             {
-                return BadRequest(ErrorMessages.RequiredFields);
-            }
-
-            var user = await _db.Users
-                .FirstOrDefaultAsync(u => (u.Email == request.Identifier || u.Username == request.Identifier));
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            {
-                return BadRequest(ErrorMessages.InvalidCredentials);
-            }
-
-            var token = GenerateJwtToken(user);
-
-            return Ok(new { token });
-        }
-
-
-        //generate jwt token
-        private string GenerateJwtToken(User user)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_configuration["Jwt:Key"]);
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
+                var validationResult = await ValidateLoginAsync(request);
+                if (validationResult != null)
                 {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                    new Claim(ClaimTypes.Name, user.Username),
-                    new Claim(ClaimTypes.Email, user.Email)
-                }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                //Expires = DateTime.UtcNow.AddSeconds(20),
-                Issuer = _configuration["Jwt:Issuer"],
-                Audience = _configuration["Jwt:Audience"],
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+                    return validationResult;
+                }
+
+                var user = await _authService.GetUserByIdentifierAsync(request.Identifier);
+                user.IsLoggedIn = true;
+                await _authService.UpdateUserAsync(user);
+
+                var token = _authService.GenerateJwtToken(user);
+
+                return Ok(new { token });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in Login method.");
+                return StatusCode(500, new { message = $"Internal server error in Login method: {ex.Message}" });
+            }
         }
 
-        //logout user
+        private async Task<IActionResult> ValidateLoginAsync(UserLoginDto request)
+        {
+            if (string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest(new { message = ErrorMessages.RequiredFieldsPassword });
+            }
+
+            if (string.IsNullOrEmpty(request.Identifier))
+            {
+                return BadRequest(new { message = ErrorMessages.RequiredFieldsIdentifier });
+            }
+
+            var user = await _authService.GetUserByIdentifierAsync(request.Identifier);
+
+            if (user == null)
+            {
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
+            }
+
+            if (!user.IsActive)
+            {
+                return Unauthorized(new { message = "Your account is temporarily deactivated. Please contact the admin." });
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            {
+                return Unauthorized(new { message = ErrorMessages.InvalidCredentials });
+            }
+
+            return null;
+        }
+
+
+
         [HttpPost("logout")]
         [Authorize]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                var validationResult = await ValidateLogoutAsync();
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                return Ok(new { message = "User logged out successfully" });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Error occurred in Logout method.");
+                return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error occurred in Logout method.");
+                return StatusCode(500, new { message = $"Internal server error in Logout method: {ex.Message}" });
+            }
+        }
+
+        private async Task<IActionResult> ValidateLogoutAsync()
         {
             var authHeader = Request.Headers["Authorization"].ToString();
             if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
                 var token = authHeader.Substring("Bearer ".Length).Trim();
-                _tokenRevocationService.RevokeToken(token);
-                return Ok(new { message = "User logged out successfully" });
+                _logger.LogInformation($"Attempting to log out user with token: {token}");
+
+                var user = await _authService.GetUserByTokenAsync(token);
+                if (user != null)
+                {
+                    _logger.LogInformation($"User found: {user.Username}. Updating IsLoggedIn status to false.");
+
+                    user.IsLoggedIn = false;
+                    await _authService.UpdateUserAsync(user);
+
+                    _tokenRevocationService.RevokeToken(token);
+                }
+                else
+                {
+                    _logger.LogWarning("Invalid token or user not found");
+                    return BadRequest(new { message = "Invalid token or user not found" });
+                }
+            }
+            else
+            {
+                _logger.LogWarning("User not logged in");
+                return BadRequest(new { message = "User not logged in" });
             }
 
-            return BadRequest(new { message = "User not logged in" });
+            return null;
         }
+
+
+        [HttpPut("update-details")]
+        [Authorize]
+        public async Task<IActionResult> UpdateUserDetails([FromBody] UpdateUserDto request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var user = await _authService.GetUserByIdAsync(userId);
+
+                var validationResult = await ValidateUpdateUserDetailsAsync(request, user);
+                if (validationResult != null)
+                {
+                    return validationResult;
+                }
+
+                await _authService.UpdateUserAsync(user);
+
+                return Ok(new { message = "User details updated successfully" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in UpdateUserDetails method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdateUserDetails method: {ex.Message}" });
+            }
+        }
+
+        private async Task<IActionResult> ValidateUpdateUserDetailsAsync(UpdateUserDto request, User user)
+        {
+            if (request.Username == null && request.Email == null)
+            {
+                return BadRequest(new { message = "Updating fields cannot be null" });
+            }
+
+            if (request.Username != null)
+            {
+                if (string.IsNullOrWhiteSpace(request.Username))
+                {
+                    return BadRequest(new { message = "Username cannot be empty" });
+                }
+
+                if (!Regex.IsMatch(request.Username, @"^[a-zA-Z0-9]{3,20}$"))
+                {
+                    return BadRequest(new { message = "Username must be between 3 and 20 characters and contain only letters and numbers." });
+                }
+
+                if (await _authService.UserExistsByUsername(request.Username))
+                {
+                    return BadRequest(new { message = ErrorMessages.UsernameExists });
+                }
+
+                user.Username = request.Username;
+            }
+
+            if (request.Email != null)
+            {
+                if (string.IsNullOrWhiteSpace(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailEmpty });
+                }
+
+                if (!_authService.IsValidEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.InvalidEmailFormat });
+                }
+
+                if (await _authService.UserExistsByEmail(request.Email))
+                {
+                    return BadRequest(new { message = ErrorMessages.EmailExists });
+                }
+
+                user.Email = request.Email;
+            }
+
+            return null;
+        }
+
+
+
+        [HttpPut("update-password")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var user = await _authService.GetUserByIdAsync(userId);
+
+                if (string.IsNullOrWhiteSpace(request.OldPassword))
+                {
+                    return BadRequest(new { message = ErrorMessages.OldPasswordEmpty });
+                }
+
+                if (!BCrypt.Net.BCrypt.Verify(request.OldPassword, user.PasswordHash))
+                {
+                    return BadRequest(new { message = "Old password is incorrect" });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return BadRequest(new { message = ErrorMessages.NewPasswordEmpty });
+                }
+
+                if (!_authService.ValidatePassword(request.NewPassword, out string validationMessage))
+                {
+                    return BadRequest(new { message = validationMessage });
+                }
+
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                user.IsLoggedIn = false; // Set IsLoggedIn to false
+
+                await _authService.UpdateUserAsync(user);
+
+                // Revoke the user's token
+                var authHeader = Request.Headers["Authorization"].ToString();
+                if (authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var token = authHeader.Substring("Bearer ".Length).Trim();
+                    _tokenRevocationService.RevokeToken(token);
+                }
+
+                return Ok(new { message = "Password changed, please login again" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred in UpdatePassword method.");
+                return StatusCode(500, new { message = $"Internal server error in UpdatePassword method: {ex.Message}" });
+            }
+        }
+
+
 
     }
 }
